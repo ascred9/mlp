@@ -13,22 +13,120 @@ Network::Exception::Exception(const char* message)
 
 Network::Network()
 {
-    std::cout << "Hello Network" << std::endl;
 }
 
 Network::~Network()
 {
-    m_topology.clear();
-    m_input.clear();
-    m_output.clear();
-    m_layers.clear();
-    std::cout << "Buy Network" << std::endl;
 }
 
-void Network::init_from_file(const std::string& in_file_name, const std::string& out_file_name="")
+Network* Network::init_from_file(const std::string& in_file_name, const std::string& out_file_name="")
 {
-    std::cout << in_file_name << " " << out_file_name << std::endl;
-    return;
+    std::ifstream fin(in_file_name);
+    if (!fin.is_open())
+    {
+        std::cout << "Failed to open: " << in_file_name << std::endl;
+        return nullptr;
+    }
+    
+    Network* net = new Network();
+
+    if (out_file_name != "")
+        net->m_out_file_name = out_file_name;
+    else
+        net->m_out_file_name = "network.txt";
+
+    std::string data;
+    std::vector<std::vector<double>> matrices;
+    std::vector<std::vector<double>> vectors;
+    while (fin >> data)
+    {
+        if (data == "numb_input")
+        {
+            fin >> net->m_numb_input;
+            continue;
+        }
+        if (data == "numb_output")
+        {
+            fin >> net->m_numb_output;
+            continue;
+        }
+        unsigned int deep;
+        if (data == "deep")
+        {
+            fin >> deep;
+            net->m_topology.reserve(deep);
+            continue;
+        }
+        if (data == "topology" && deep > 0)
+        {
+            unsigned int size;
+            for (unsigned int idx = 0; idx < deep; ++idx)
+            {
+                fin >> size;
+                net->m_topology.emplace_back(size);
+            }
+            net->m_layer_deque.add_layers(net->m_topology);
+            continue;
+        }
+        if (data == "active_funcs" && deep > 0)
+        {
+            for (unsigned int i=0; i<deep; ++i)
+            {
+                fin >> data;
+                net->m_active_funcs.push_back(data);
+            }
+            net->m_layer_deque.set_active_funcs(net->m_active_funcs);
+            continue;
+        }
+        if (data == "[")
+        {
+            std::vector<double> weights;
+            while (true)
+            {
+                fin >> data;
+                if (data == "]")
+                    break;
+                double weight = std::stod(data);
+                weights.push_back(weight);
+            }
+            matrices.push_back(weights);
+            continue;
+        }
+        if (data == "{")
+        {
+            std::vector<double> biases;
+            while (true)
+            {
+                fin >> data;
+                if (data == "}")
+                    break;
+                double bias = std::stod(data);
+                biases.push_back(bias);
+            }
+            vectors.push_back(biases);
+            continue;
+        }
+        if (data == "nepoch")
+        {
+            fin >> net->m_nepoch;
+            continue;
+        }
+        if (data == "loss_func" )
+        {
+            fin >> data;
+            net->m_loss = data;
+            net->m_layer_deque.set_loss_func(data);
+            continue;
+        }
+    }
+    fin.close();
+    net->m_layer_deque.set_layers(matrices, vectors);
+    net->print(std::cout);
+    std::ofstream fout(net->m_out_file_name.c_str());
+    net->print(fout);
+    fout.close();
+
+    return net;
 }
 
 Network* Network::create(unsigned int numb_input, unsigned int numb_output, const std::vector<unsigned int>& hidden_topology, const std::string& out_file_name)
@@ -64,26 +162,56 @@ Network* Network::create(unsigned int numb_input, unsigned int numb_output, cons
     net->m_topology.emplace_back(numb_output);
     net->m_out_file_name = out_file_name;
 
-    net->m_layers.add_layers(net->m_topology);
-    net->m_layers.generate_weights("Xavier");
+    net->m_layer_deque.add_layers(net->m_topology);
+
+    net->m_active_funcs.push_back("linear");
+    for (unsigned int idx=0; idx<hidden_topology.size(); ++idx)
+        net->m_active_funcs.push_back("sigmoid");
+    net->m_active_funcs.push_back("linear");
+
+    net->m_nepoch = 0;
+    net->m_loss = "LS";
+    net->m_layer_deque.set_loss_func("LS");
+
+    net->m_layer_deque.generate_weights("Xavier");
 
     net->print(std::cout);
+    std::ofstream fout(net->m_out_file_name.c_str());
+    net->print(fout);
+    fout.close();
     return net;
 }
 
 void Network::print(std::ostream& os) const
 {
     std::string result;
-    os << "numb_input " + std::to_string(m_numb_input) + "\n";
-    os << "numb_output " + std::to_string(m_numb_output) + "\n";
-    os << "topology: ";
+    os << "numb_input "     << m_numb_input << std::endl;
+    os << "numb_output "    << m_numb_output << std::endl;
+    os << "deep "           << m_topology.size() << std::endl;
+    os << "nepoch "         << m_nepoch << std::endl;
+    os << "loss_func "      << m_loss << std::endl;
+    os << "topology ";
     for (const auto& size: m_topology)
-        std::cout << size << " -> ";
-    std::cout << "\n";
+        os << size << " ";
+    os << std::endl;
 
-    m_layers.print(os);
+    os << "active_funcs ";
+    for (const auto& func: m_active_funcs)
+        os << func << " ";
+    os << std::endl;
+
+    m_layer_deque.print(os);
 }
 
 std::vector<double> Network::get_result(const std::vector<double>& input) const{
-    return m_layers.calculate(input);
+    return m_layer_deque.calculate(input);
+}
+
+void Network::train_on_data(const std::vector<double>& input, const std::vector<double>& output)
+{
+    m_layer_deque.train_on_data(input, output);
+    ++m_nepoch;
+    std::ofstream fout(m_out_file_name.c_str());
+    print(fout);
+    fout.close();
 }

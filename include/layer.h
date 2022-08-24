@@ -13,28 +13,39 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 
 class Layer
 {
+    friend class LayerDeque;
 private:
     unsigned int m_size;
-    unsigned int m_in_size;
-    unsigned int m_out_size;
+    unsigned int m_in_size = 0.;
+    unsigned int m_out_size = 0.;
 
     std::function<double(double)> m_f;
     std::function<double(double)> m_fp;
 
     Matrix m_matrixW;
-    double m_bias;
+    Matrix m_vectorB;
+    const double m_bias = 1.;
+
+    const Vector calculate(const Vector& input) const;
+    const Vector calculateZ(const Vector& inputX) const;
+    const Vector calculateX(const Vector& inputZ) const;
+    const Vector calculateXp(const Vector& inputZ) const;
+    void generate_weights(const std::string& init_type);
+    Matrix get_matrixW() const;
+    Vector get_vectorB() const;
+    void print(std::ostream& os) const;
+    const unsigned int& size() const;
+    void set_in_size(unsigned int in_size);
+    void set_out_size(unsigned int out_size);
+    void set_func(std::string func_name);
+    void set_matrixW(const std::vector<double>& weights);
+    void set_matrixW(const Matrix& weights);
+    void set_vecB(const std::vector<double>& biases);
+    void set_vecB(const Vector& biases);
 
 public:
     Layer(unsigned int size);
     ~Layer();
-
-    const Vector calculate(const Vector& input) const;
-    void generate_weights(const std::string& init_type);
-    void print(std::ostream& os) const;
-    void set_in_size(unsigned int in_size);
-    void set_out_size(unsigned int out_size);
-    void set_func(std::string func_name);
-    const unsigned int& size() const;
 };
 
 using LayerPtr = std::shared_ptr<Layer>;
@@ -43,6 +54,10 @@ class LayerDeque
 {
 private:
     std::vector<LayerPtr> m_layers;
+    std::string m_loss_type;
+    std::function<double(double, double)> m_floss; // first is true val, second is estimation
+    std::function<double(double, double)> m_fploss; // first is true val, second is estimation
+    double m_step = 0.05;
 
 public:
     LayerDeque();
@@ -53,4 +68,8 @@ public:
     void clear();
     void generate_weights(const std::string& init_type);
     void print(std::ostream& os) const;
+    void set_active_funcs(const std::vector<std::string>& active_funcs);
+    void set_layers(const std::vector<std::vector<double>>& matrices, const std::vector<std::vector<double>>& biases); // first is vector of matrices with weights, second is bias vector
+    void set_loss_func(const std::string& loss_type);
+    void train_on_data(const std::vector<double>& input, const std::vector<double>& output);
 };

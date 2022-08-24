@@ -1,24 +1,39 @@
 #include "layer.h"
 
 Layer::Layer(unsigned int size):
-    m_size(size),
-    m_in_size(0),
-    m_out_size(0)
+    m_size(size)
 {
-    m_bias = 0.5;
 }
 
 Layer::~Layer()
 {
-    std::cout << "Delete layer" << this << " with size " << m_size << std::endl;
 }
 
 const Vector Layer::calculate(const Vector& input) const
 {
     if (m_out_size == 0 ) // end layer
-        return input;
+        return calculateX(input);
 
-    return (input * m_matrixW + Vector::Constant(m_out_size, m_bias)).unaryExpr(m_f).transpose();
+    return calculateZ(calculateX(input));
+    //return (input * m_matrixW + m_vectorB * m_bias).unaryExpr(m_f).transpose();
+}
+
+const Vector Layer::calculateZ(const Vector& inputX) const
+{
+    if (m_out_size == 0 ) // end layer
+        return inputX;
+
+    return (inputX * m_matrixW + m_vectorB * m_bias).transpose();
+}
+
+const Vector Layer::calculateX(const Vector& inputZ) const
+{
+    return inputZ.unaryExpr(m_f);
+}
+
+const Vector Layer::calculateXp(const Vector& inputZ) const
+{
+    return inputZ.unaryExpr(m_fp);
 }
 
 void Layer::generate_weights(const std::string& init_type)
@@ -27,6 +42,7 @@ void Layer::generate_weights(const std::string& init_type)
         return;
 
     m_matrixW = Matrix::Random(m_size, m_out_size);
+    m_vectorB = Vector::Random(m_out_size);
     double coef;
     if (init_type == "Xavier")
         coef = std::sqrt( 6. / (m_size + m_out_size));
@@ -34,13 +50,30 @@ void Layer::generate_weights(const std::string& init_type)
         coef = 1;
 
     m_matrixW *= coef;
-    m_bias = coef;
+    m_vectorB *= coef;
+}
+
+Matrix Layer::get_matrixW() const
+{
+    return m_matrixW;
+}
+
+Vector Layer::get_vectorB() const
+{
+    return m_vectorB;
 }
 
 void Layer::print(std::ostream &os) const
 {
-    os << m_size << std::endl;
-    os << m_matrixW << std::endl;
+    if (m_out_size == 0)
+        return;
+    os << "[ " << m_matrixW << " ]" << std::endl;
+    os << "{ " << m_vectorB << " }" << std::endl;
+}
+
+const unsigned int& Layer::size() const
+{
+    return m_size;
 }
 
 void Layer::set_in_size(unsigned int in_size)
@@ -94,11 +127,45 @@ void Layer::set_func(std::string name)
         m_f = [](double x){return (std::sqrt(std::pow(x, 2) + 1.) - 1.)/2.+ x;};
         m_fp = [](double x){return x/(2*std::sqrt(std::pow(x, 2) + 1.)) + 1.;};
     }
+    else if (name == "logic")
+    {
+        m_f = [](double x){return x>0? 1: 0;}; // actually, x<0? 0: 1;
+        m_fp = [](double x){return x!=0? 0: std::numeric_limits<double>::infinity();};
+    }
 }
 
-const unsigned int& Layer::size() const
+void Layer::set_matrixW(const std::vector<double>& weights)
 {
-    return m_size;
+    if (weights.size() != m_size * m_out_size)
+        throw std::invalid_argument("size of input matrix is not equal to size of create layer");
+
+    std::vector<double> vec = weights;
+    m_matrixW = Eigen::Map<Matrix, Eigen::Aligned>(vec.data(), m_out_size, m_size).transpose();
+}
+
+void Layer::set_matrixW(const Matrix& weights)
+{
+    if (weights.size() != m_size * m_out_size)
+        throw std::invalid_argument("size of input matrix is not equal to size of create layer");
+
+    m_matrixW = weights;
+}
+
+void Layer::set_vecB(const std::vector<double>& biases)
+{
+    if (biases.size() != m_out_size)
+        throw std::invalid_argument("size of input vector is not equal to size of create layer");
+
+    std::vector<double> vec = biases;
+    m_vectorB = Eigen::Map<Vector, Eigen::Aligned>(vec.data(), m_out_size);
+}
+
+void Layer::set_vecB(const Vector& biases)
+{
+    if (biases.size() != m_out_size)
+        throw std::invalid_argument("size of input vector is not equal to size of create layer");
+
+    m_vectorB = biases;
 }
 
 LayerDeque::LayerDeque()
@@ -125,6 +192,7 @@ void LayerDeque::add_layers(std::vector<unsigned int> topology)
             iter->get()->set_out_size(0);
         }
         
+        // default initialization of activization functions
         if (iter == begin(m_layers) || iter == end(m_layers))
             iter->get()->set_func("linear");
         else
@@ -134,20 +202,21 @@ void LayerDeque::add_layers(std::vector<unsigned int> topology)
 
 std::vector<double> LayerDeque::calculate(const std::vector<double>& input) const
 {
-    if (m_layers.at(0)->size() != input.size())
-        throw std::invalid_argument("wrong input"); // TODO: make an global Exception static class
+    if (m_layers.front()->size() != input.size())
+        throw std::invalid_argument("wrong input size, it is not equal to input layer size"); // TODO: make an global Exception static class
 
     int size = input.size();
-    std::vector<double> v = input;
+    std::vector<double> vec = input;
 
-    Vector res = Eigen::Map<Vector, Eigen::Unaligned>(v.data(), size);
-    std::cout << res << " input " << std::endl;
-    for (int idx=0; idx < m_layers.size() - 1; ++idx)
+    Vector res = Eigen::Map<Vector, Eigen::Aligned>(vec.data(), size);
+    //std::cout << "input: " << res;
+    for (const auto& layer: m_layers)
     {
-        //std::cout << m_layers.at(idx)->calculate(res) << ", idx: " << idx << std::endl;
-        res = m_layers.at(idx)->calculate(res);
+        res = layer->calculate(res);
     }
+    //std::cout << " -> output: " << res << std::endl;
 
+    //return vec;
     return std::vector<double>(res.data(), res.data() + res.size());
 }
 
@@ -167,8 +236,93 @@ void LayerDeque::generate_weights(const std::string& init_type)
 void LayerDeque::print(std::ostream& os) const
 {
     for(const auto& pLayer: m_layers)
-    {
         pLayer->print(os);
-        os << std::endl;;
+}
+
+void LayerDeque::set_active_funcs(const std::vector<std::string>& active_funcs)
+{
+    if (active_funcs.size() != m_layers.size())
+        throw std::invalid_argument("number of bias is not equal to number of transform matrices");
+
+    for (unsigned int idx = 0; idx < active_funcs.size(); ++idx)
+        m_layers.at(idx)->set_func(active_funcs.at(idx));
+}
+
+void LayerDeque::set_layers(const std::vector<std::vector<double>>& matrices, const std::vector<std::vector<double>>& biases)
+{
+    if (matrices.size() != biases.size())
+        throw std::invalid_argument("number of bias is not equal to number of transform matrices");
+
+    if (m_layers.size()-1 != biases.size()) // end layer will have default init
+        throw std::invalid_argument("number of layer is not equal to number of bias/transform matrices");
+    
+    for (unsigned int idx = 0; idx < m_layers.size()-1; ++idx)
+    {
+        m_layers[idx]->set_matrixW(matrices.at(idx));
+        m_layers[idx]->set_vecB(biases.at(idx));
+    }
+}
+
+void LayerDeque::set_loss_func(const std::string& loss_type)
+{
+    m_loss_type = loss_type;
+    if (m_loss_type == "LS")
+    {
+        m_floss = [](double real, double output){return 0.5 * pow(output - real, 2);};
+        m_fploss = [](double real, double output){return output-real;};
+    }
+    else
+        throw std::invalid_argument("this loss function isn't implemented");
+}
+
+void LayerDeque::train_on_data(const std::vector<double>& input, const std::vector<double>& output)
+{
+    if (m_layers.front()->size() != input.size())
+        throw std::invalid_argument("wrong input size"); // TODO: make an global Exception static class
+
+    if (m_layers.back()->size() != output.size())
+        throw std::invalid_argument("wrong output size"); // TODO: make an global Exception static class
+
+    int in_size = input.size();
+    std::vector<double> input_v = input;
+    Vector Zin = Eigen::Map<Vector, Eigen::Aligned>(input_v.data(), in_size);
+
+    int out_size = output.size();
+    std::vector<double> output_v = output;
+    Vector Y = Eigen::Map<Vector, Eigen::Aligned>(output_v.data(), out_size);
+
+    // Xi = f(sum( Wij * Zj) + Bi), i - output neuron, j - input neurons
+    std::vector<Vector> Z_layers; // (Z0, Z1, Z2, ..., Zn), this vector has size m_layers.size()
+    std::vector<Vector> X_layers; // (X0, X1, X2, ..., Xn), this vector has size m_layers.size()
+
+    // init Z_layers and X_layers
+    {
+        Vector Z_layer = Zin;
+        Z_layers.push_back(Z_layer);
+        Vector X_layer = m_layers.front()->calculateX(Z_layer);
+        X_layers.push_back(X_layer);
+        for (unsigned int idx = 0; idx < m_layers.size() - 1; ++idx)
+        {
+            Z_layer = m_layers.at(idx)->calculateZ(X_layer);
+            X_layer = m_layers.at(idx+1)->calculateX(Z_layer);
+
+            Z_layers.push_back(Z_layer);
+            X_layers.push_back(X_layer);
+        }
+    }
+
+    Vector delta_init = (X_layers.back() - Y).array() * m_layers.back()->calculateXp(Z_layers.back()).array();
+    Vector delta = delta_init;
+    std::vector<Vector> deltas;
+    deltas.push_back(delta);
+    for (unsigned int idx = m_layers.size()-2; idx > 0; --idx)
+    {
+        delta = m_layers.at(idx)->calculateXp(Z_layers.at(idx)).array() * (delta * m_layers.at(idx)->get_matrixW().transpose()).array();
+        deltas.push_back(delta);
+    }
+    for (unsigned idx = 0; idx < m_layers.size()-1; ++idx)
+    {
+        m_layers.at(idx)->set_matrixW( m_layers.at(idx)->get_matrixW() - m_step * X_layers.at(idx).transpose() * deltas.at(m_layers.size() - 2 -idx) );
+        m_layers.at(idx)->set_vecB( m_layers.at(idx)->get_vectorB() - m_step * deltas.at(m_layers.size() - 2 - idx) );
     }
 }
