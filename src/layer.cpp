@@ -15,7 +15,7 @@ const Vector Layer::calculate(const Vector& input) const
         return calculateX(input);
 
     return calculateZ(calculateX(input));
-    //return (input * m_matrixW + m_vectorB * m_bias).unaryExpr(m_f).transpose();
+    //return (input.unaryExpr(m_f) * m_matrixW + m_vectorB * m_bias).transpose();
 }
 
 const Vector Layer::calculateZ(const Vector& inputX) const
