@@ -203,6 +203,13 @@ void Network::print(std::ostream& os) const
     m_layer_deque.print(os);
 }
 
+void Network::save() const
+{
+    std::ofstream fout(m_out_file_name.c_str());
+    print(fout);
+    fout.close();
+}
+
 std::vector<double> Network::get_result(const std::vector<double>& input) const{
     return m_layer_deque.calculate(input);
 }
@@ -210,8 +217,4 @@ std::vector<double> Network::get_result(const std::vector<double>& input) const{
 void Network::train_on_data(const std::vector<double>& input, const std::vector<double>& output)
 {
     m_layer_deque.train_on_data(input, output);
-    ++m_nepoch;
-    std::ofstream fout(m_out_file_name.c_str());
-    print(fout);
-    fout.close();
 }

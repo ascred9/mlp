@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <functional>
 
-
 #include "eigen-3.4.0/Eigen/Core"
 
 typedef Eigen::Matrix<double, 1, Eigen::Dynamic> Vector;
@@ -40,8 +39,8 @@ private:
     void set_func(std::string func_name);
     void set_matrixW(const std::vector<double>& weights);
     void set_matrixW(const Matrix& weights);
-    void set_vecB(const std::vector<double>& biases);
-    void set_vecB(const Vector& biases);
+    void set_vectorB(const std::vector<double>& biases);
+    void set_vectorB(const Vector& biases);
 
 public:
     Layer(unsigned int size);
@@ -55,10 +54,11 @@ class LayerDeque
 private:
     std::vector<LayerPtr> m_layers;
     std::string m_loss_type;
-    std::function<double(double, double)> m_floss; // first is true val, second is estimation
-    std::function<double(double, double)> m_fploss; // first is true val, second is estimation
-    double m_step = 0.05;
+    std::function<const Vector(const Vector&, const Vector&)> m_floss; // first is true val, second is estimation
+    std::function<const Vector(const Vector&, const Vector&)> m_fploss; // first is true val, second is estimation
+    double m_step = 0.5;
 
+    std::vector<std::pair<Matrix, Vector>> get_dL(const std::vector<double>& input, const std::vector<double>& output) const;
 public:
     LayerDeque();
     ~LayerDeque();
