@@ -22,7 +22,7 @@ private:
     std::function<double(double)> m_fp;
 
     Matrix m_matrixW;
-    Matrix m_vectorB;
+    Vector m_vectorB;
     const double m_bias = 1.;
 
     const Vector calculate(const Vector& input) const;
@@ -30,8 +30,8 @@ private:
     const Vector calculateX(const Vector& inputZ) const;
     const Vector calculateXp(const Vector& inputZ) const;
     void generate_weights(const std::string& init_type);
-    Matrix get_matrixW() const;
-    Vector get_vectorB() const;
+    const Matrix& get_matrixW() const;
+    const Vector& get_vectorB() const;
     void print(std::ostream& os) const;
     const unsigned int& size() const;
     void set_in_size(unsigned int in_size);
@@ -58,7 +58,7 @@ private:
     std::function<const Vector(const Vector&, const Vector&)> m_fploss; // first is true val, second is estimation
     double m_step = 0.5;
 
-    std::vector<std::pair<Matrix, Vector>> get_dL(const std::vector<double>& input, const std::vector<double>& output) const;
+    std::vector<std::pair<Matrix, Vector>> get_gradient(const std::vector<double>& input, const std::vector<double>& output) const;
 public:
     LayerDeque();
     ~LayerDeque();
@@ -71,5 +71,5 @@ public:
     void set_active_funcs(const std::vector<std::string>& active_funcs);
     void set_layers(const std::vector<std::vector<double>>& matrices, const std::vector<std::vector<double>>& biases); // first is vector of matrices with weights, second is bias vector
     void set_loss_func(const std::string& loss_type);
-    void train_on_data(const std::vector<double>& input, const std::vector<double>& output);
+    void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 0);
 };

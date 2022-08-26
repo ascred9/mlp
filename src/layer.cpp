@@ -52,12 +52,12 @@ void Layer::generate_weights(const std::string& init_type)
     m_vectorB *= coef;
 }
 
-Matrix Layer::get_matrixW() const
+const Matrix& Layer::get_matrixW() const
 {
     return m_matrixW;
 }
 
-Vector Layer::get_vectorB() const
+const Vector& Layer::get_vectorB() const
 {
     return m_vectorB;
 }
@@ -268,24 +268,57 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
         throw std::invalid_argument("this loss function isn't implemented");
 }
 
-void LayerDeque::train_on_data(const std::vector<double>& input, const std::vector<double>& output)
+void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size)
 {
-    if (m_layers.front()->size() != input.size())
-        throw std::invalid_argument("wrong input size"); // TODO: make an global Exception static class
+    if (input.size() != output.size())
+        throw std::invalid_argument("input size is not equal to output size of training data"); // TODO: make an global Exception static class
 
-    if (m_layers.back()->size() != output.size())
-        throw std::invalid_argument("wrong output size"); // TODO: make an global Exception static class
+    std::vector<Matrix> gradients_W;
+    std::vector<Vector> gradients_B;
+    gradients_W.reserve(m_layers.size() - 1);
+    gradients_B.reserve(m_layers.size() - 1);
 
-    std::vector<std::pair<Matrix, Vector>> dL = get_dL(input, output);
+    auto reset_gradients = [this, &gradients_W, &gradients_B](){
+        gradients_W.clear();
+        gradients_B.clear();
+        for (unsigned int idl = 0; idl < m_layers.size() - 1; ++idl)
+        {
+           gradients_W.emplace_back( Matrix::Zero(m_layers.at(idl)->size(), m_layers.at(idl+1)->size()) );
+           gradients_B.emplace_back( Vector::Zero(m_layers.at(idl+1)->size()) );
+        }
+    };
 
-    for (unsigned idx = 0; idx < m_layers.size()-1; ++idx)
+    reset_gradients();
+
+    for (unsigned int idx = 0; idx < input.size(); ++idx)
     {
-        m_layers.at(idx)->set_matrixW(m_layers.at(idx)->get_matrixW() - m_step * dL.at(idx).first );
-        m_layers.at(idx)->set_vectorB(m_layers.at(idx)->get_vectorB() - m_step * dL.at(idx).second );
+        if (m_layers.front()->size() != input.at(idx).size())
+            throw std::invalid_argument("wrong input size"); // TODO: make an global Exception static class
+
+        if (m_layers.back()->size() != output.at(idx).size())
+            throw std::invalid_argument("wrong output size"); // TODO: make an global Exception static class
+
+        std::vector<std::pair<Matrix, Vector>> gradient = get_gradient(input.at(idx), output.at(idx));
+
+        for (unsigned idl = 0; idl < m_layers.size() - 1; ++idl)
+        {
+            gradients_W.at(idl) += gradient.at(idl).first;
+            gradients_B.at(idl) += gradient.at(idl).second;
+        }
+
+        if ( (idx + 1) % batch_size == 0)
+        {
+            for (unsigned int idl = 0; idl < m_layers.size() - 1; ++idl)
+            {
+                m_layers.at(idl)->set_matrixW(m_layers.at(idl)->get_matrixW() - (m_step / batch_size) * gradients_W.at(idl));
+                m_layers.at(idl)->set_vectorB(m_layers.at(idl)->get_vectorB() - (m_step / batch_size) * gradients_B.at(idl));
+            }
+            reset_gradients();
+        }
     }
 }
 
-std::vector<std::pair<Matrix, Vector>> LayerDeque::get_dL(const std::vector<double>& input, const std::vector<double>& output) const
+std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vector<double>& input, const std::vector<double>& output) const
 {
     std::vector<std::pair<Matrix, Vector>> dL;
     dL.reserve(m_layers.size()-1);
@@ -332,3 +365,5 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_dL(const std::vector<doub
     std::reverse( std::begin(dL), std::end(dL) );
     return dL;
 }
+
+// TODO: Make a m_step reducing, Make a regulization

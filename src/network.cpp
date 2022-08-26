@@ -214,7 +214,11 @@ std::vector<double> Network::get_result(const std::vector<double>& input) const{
     return m_layer_deque.calculate(input);
 }
 
-void Network::train_on_data(const std::vector<double>& input, const std::vector<double>& output)
+void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size)
 {
-    m_layer_deque.train_on_data(input, output);
+    if (batch_size == 0)
+        batch_size = 1;
+    m_layer_deque.train(input, output, batch_size);
 }
+
+// TODO: Make a normalization of input and iutput data, and radnomazing of data order, also add testing

@@ -32,13 +32,16 @@ int main()
     clock_t start, end;
     start = clock();
     int Nepoch = 5e4;
+    std::vector<std::vector<double>> in, out;
     for (int i=0; i < Nepoch; i++)
     {
         double x = dis(gen);
         double y = dis(gen);
         double z = x * y;
-        net_ptr->train_on_data({x, y}, {z});
+        in.push_back({x, y});
+        out.push_back({z});
     }
+    net_ptr->train(in, out);
     net_ptr->save();
     end = clock();
     std::cout << "Training Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
