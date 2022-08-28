@@ -31,9 +31,9 @@ int main()
 
     clock_t start, end;
     start = clock();
-    int Nepoch = 5e4;
+    int Nevent = 5e4;
     std::vector<std::vector<double>> in, out;
-    for (int i=0; i < Nepoch; i++)
+    for (int i=0; i < Nevent; i++)
     {
         double x = dis(gen);
         double y = dis(gen);
@@ -48,7 +48,7 @@ int main()
 
     start = clock();
     std::ofstream fout("cos.txt");
-    for (int i = 0; i < Nepoch; ++i)
+    for (int i = 0; i < Nevent; ++i)
     {
         double x = dis(gen);
         double y = dis(gen);

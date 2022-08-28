@@ -67,9 +67,12 @@ public:
     std::vector<double> calculate(const std::vector<double>& input) const;
     void clear();
     void generate_weights(const std::string& init_type);
+    double get_step() const;
     void print(std::ostream& os) const;
     void set_active_funcs(const std::vector<std::string>& active_funcs);
     void set_layers(const std::vector<std::vector<double>>& matrices, const std::vector<std::vector<double>>& biases); // first is vector of matrices with weights, second is bias vector
     void set_loss_func(const std::string& loss_type);
-    void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 0);
+    void set_step(const double step);
+    double test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 1) const;
+    void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 1);
 };

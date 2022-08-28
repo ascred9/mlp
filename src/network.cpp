@@ -118,6 +118,12 @@ Network* Network::init_from_file(const std::string& in_file_name, const std::str
             net->m_layer_deque.set_loss_func(data);
             continue;
         }
+        if (data == "step" )
+        {
+            double step;
+            fin >> step;
+            net->m_layer_deque.set_step(step);
+        }
     }
     fin.close();
     net->m_layer_deque.set_layers(matrices, vectors);
@@ -190,6 +196,7 @@ void Network::print(std::ostream& os) const
     os << "deep "           << m_topology.size() << std::endl;
     os << "nepoch "         << m_nepoch << std::endl;
     os << "loss_func "      << m_loss << std::endl;
+    os << "step "           << m_layer_deque.get_step() << std::endl;
     os << "topology ";
     for (const auto& size: m_topology)
         os << size << " ";
@@ -214,11 +221,53 @@ std::vector<double> Network::get_result(const std::vector<double>& input) const{
     return m_layer_deque.calculate(input);
 }
 
-void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size)
+double Network::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size) const
 {
-    if (batch_size == 0)
-        batch_size = 1;
-    m_layer_deque.train(input, output, batch_size);
+    const unsigned int input_size = input.size();
+    const unsigned int output_size = output.size();
+    if (input_size == 0 || output_size == 0)
+        throw Exception("incorrect size of input/output! it is zero!");
+
+    if (input_size != output_size)
+        throw Exception("size of input and output are not equal");
+    
+    if (batch_size > input.size())
+        throw Exception("batch size is larger then input size");
+    return m_layer_deque.test(input, output, batch_size);
 }
 
-// TODO: Make a normalization of input and iutput data, and radnomazing of data order, also add testing
+void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size, double split_mode)
+{
+    const unsigned int input_size = input.size();
+    const unsigned int output_size = output.size();
+    if (input_size == 0 || output_size == 0)
+        throw Exception("incorrect size of input/output! it is zero!");
+    
+    if (input_size != output_size)
+        throw Exception("size of input and output are not equal");
+    
+    if (batch_size > input.size())
+        throw Exception("batch size is larger then input size");
+        
+    std::vector train_input(input.begin(), input.begin() + int(split_mode * input_size));
+    std::vector train_output(output.begin(), output.begin() + int(split_mode * output_size));
+    std::vector test_input(input.begin() + int(split_mode * input_size), input.end());
+    std::vector test_output(output.begin() + int(split_mode * output_size), output.end());
+
+    if (batch_size == 0)
+        batch_size = 1;
+
+    double epsilon_before = m_layer_deque.test(test_input, test_output, batch_size);
+    m_layer_deque.train(train_input, train_output, batch_size);
+    double epsilon_after = m_layer_deque.test(test_input, test_output, batch_size);
+
+    double reduce = std::abs(epsilon_after / epsilon_before);
+    reduce = reduce < 1? 0.5 * pow(2, reduce): 2. * pow(0.5, reduce);
+    reduce = pow(reduce, m_nepoch);
+    m_layer_deque.set_step(m_layer_deque.get_step() * reduce);
+    std::cout << epsilon_before << " -> " << epsilon_after << " : " << reduce << std::endl;
+
+    ++m_nepoch;
+}
+
+// TODO: Make a normalization of input and iutput data, and radnomazing of data order, also add event weighting

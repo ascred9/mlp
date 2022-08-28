@@ -226,6 +226,11 @@ void LayerDeque::generate_weights(const std::string& init_type)
     }
 }
 
+double LayerDeque::get_step() const
+{
+    return m_step;
+}
+
 void LayerDeque::print(std::ostream& os) const
 {
     for(const auto& pLayer: m_layers)
@@ -266,6 +271,44 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     }
     else
         throw std::invalid_argument("this loss function isn't implemented");
+}
+
+void LayerDeque::set_step(const double step)
+{
+    m_step = step;
+}
+
+double LayerDeque::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size) const
+{
+    if (input.size() != output.size())
+        throw std::invalid_argument("input size is not equal to output size of training data"); // TODO: make an global Exception static class
+
+    double result = 0.;
+    double delta = 0.;
+
+    for (unsigned int idx = 0; idx < input.size(); ++idx)
+    {
+        std::vector<double> calc = calculate(input.at(idx));
+        int calc_size = calc.size();
+        const Vector Ycalc = Eigen::Map<const Vector, Eigen::Aligned>(calc.data(), calc_size);
+        
+        int out_size = output.at(idx).size();
+        const Vector Yreal = Eigen::Map<const Vector, Eigen::Aligned>(output.at(idx).data(), out_size);
+
+        delta += m_floss(Yreal, Ycalc).sum();
+
+        if ( (idx + 1) % batch_size == 0)
+        {
+            result += delta / batch_size;
+            
+            if (input.size() - idx < batch_size) // nothing to batch
+                break;
+
+            delta = 0;
+        }
+    }
+
+    return result / ( input.size() / batch_size);
 }
 
 void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size)
@@ -313,6 +356,9 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
                 m_layers.at(idl)->set_matrixW(m_layers.at(idl)->get_matrixW() - (m_step / batch_size) * gradients_W.at(idl));
                 m_layers.at(idl)->set_vectorB(m_layers.at(idl)->get_vectorB() - (m_step / batch_size) * gradients_B.at(idl));
             }
+            if (input.size() - idx < batch_size) // nothing to batch
+                break;
+
             reset_gradients();
         }
     }
@@ -365,5 +411,3 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
     std::reverse( std::begin(dL), std::end(dL) );
     return dL;
 }
-
-// TODO: Make a m_step reducing, Make a regulization
