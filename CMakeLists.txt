@@ -13,4 +13,4 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 include_directories(include)
 
-add_executable(test main.cpp src/network.cpp src/layer.cpp)
+add_executable(test main.cpp src/network.cpp src/layer.cpp src/transformation.cpp)

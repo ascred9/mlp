@@ -1,11 +1,26 @@
-#include <iostream>
-#include <cmath>
-#include <memory>
-#include <vector>
+/**
+ * @file layer.h
+ * @author Aleksandr Semenov (ascred9@gmail.com), research scientist in HEP from BINP
+ * @brief 
+ * @version 0.1
+ * @date 2022-09-01
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
+
 #include <algorithm>
+#include <cmath>
 #include <functional>
+#include <iostream>
+#include <limits>
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
 #include "eigen-3.4.0/Eigen/Core"
+#include "transformation.h"
 
 typedef Eigen::Matrix<double, 1, Eigen::Dynamic> Vector;
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
@@ -15,15 +30,16 @@ class Layer
     friend class LayerDeque;
 private:
     unsigned int m_size;
-    unsigned int m_in_size = 0.;
-    unsigned int m_out_size = 0.;
+    unsigned int m_in_size;
+    unsigned int m_out_size;
 
     std::function<double(double)> m_f;
     std::function<double(double)> m_fp;
 
     Matrix m_matrixW;
     Vector m_vectorB;
-    const double m_bias = 1.;
+    const double m_bias;
+
 
     const Vector calculate(const Vector& input) const;
     const Vector calculateZ(const Vector& inputX) const;
@@ -56,7 +72,7 @@ private:
     std::string m_loss_type;
     std::function<const Vector(const Vector&, const Vector&)> m_floss; // first is true val, second is estimation
     std::function<const Vector(const Vector&, const Vector&)> m_fploss; // first is true val, second is estimation
-    double m_step = 0.5;
+    double m_step;
 
     std::vector<std::pair<Matrix, Vector>> get_gradient(const std::vector<double>& input, const std::vector<double>& output) const;
 public:

@@ -1,7 +1,22 @@
+/**
+ * @file layer.cpp
+ * @author Aleksandr Semenov (ascred9@gmail.com), research scientist in HEP from BINP
+ * @brief 
+ * @version 0.1
+ * @date 2022-09-01
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
+
 #include "layer.h"
 
 Layer::Layer(unsigned int size):
-    m_size(size)
+    m_size(size),
+    m_in_size(0),
+    m_out_size(0),
+    m_bias(1)
 {
 }
 
@@ -167,7 +182,8 @@ void Layer::set_vectorB(const Vector& biases)
     m_vectorB = biases;
 }
 
-LayerDeque::LayerDeque()
+LayerDeque::LayerDeque():
+    m_step(0.5)
 {
 }
 
@@ -308,7 +324,7 @@ double LayerDeque::test(const std::vector<std::vector<double>>& input, const std
         }
     }
 
-    return result / ( input.size() / batch_size);
+    return result /  input.size() * batch_size;
 }
 
 void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size)
@@ -316,6 +332,7 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
     if (input.size() != output.size())
         throw std::invalid_argument("input size is not equal to output size of training data"); // TODO: make an global Exception static class
 
+    // Reserve memory and define reset func
     std::vector<Matrix> gradients_W;
     std::vector<Vector> gradients_B;
     gradients_W.reserve(m_layers.size() - 1);
@@ -333,6 +350,7 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
 
     reset_gradients();
 
+    // Calculate gradients
     for (unsigned int idx = 0; idx < input.size(); ++idx)
     {
         if (m_layers.front()->size() != input.at(idx).size())
