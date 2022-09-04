@@ -162,6 +162,13 @@ Network* Network::init_from_file(const std::string& in_file_name, const std::str
             net->m_layer_deque.set_step(step);
             continue;
         }
+        if (data == "regulization_rate")
+        {
+            double rate;
+            fin >> rate;
+            net->m_layer_deque.set_regulization_rate(rate);
+            continue;
+        }
         if (data == "input_transforms" || data == "output_transforms")
         {
             unsigned int ntransforms = (data == "input_transforms")? net->m_numb_input: net->m_numb_output;
@@ -334,7 +341,7 @@ std::vector<double> Network::get_result(const std::vector<double>& input) const
     return transf_output;
 }
 
-double Network::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size) const
+double Network::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const
 {
     const unsigned int input_size = input.size();
     const unsigned int output_size = output.size();
@@ -344,9 +351,7 @@ double Network::test(const std::vector<std::vector<double>>& input, const std::v
     if (input_size != output_size)
         throw Exception("size of input and output are not equal");
     
-    if (batch_size > input.size() || batch_size == 0)
-        throw Exception("batch size is larger then input size or is zero");
-    return m_layer_deque.test(input, output, batch_size);
+    return m_layer_deque.test(input, output);
 }
 
 void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size, double split_mode)
@@ -393,9 +398,9 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
     std::vector<std::vector<double>> test_input(transf_input.begin() + int(split_mode * input_size), transf_input.end());
     std::vector<std::vector<double>> test_output(transf_output.begin() + int(split_mode * output_size), transf_output.end());
 
-    double epsilon_before = m_layer_deque.test(test_input, test_output, batch_size);
+    double epsilon_before = m_layer_deque.test(test_input, test_output);
     m_layer_deque.train(train_input, train_output, batch_size);
-    double epsilon_after = m_layer_deque.test(test_input, test_output, batch_size);
+    double epsilon_after = m_layer_deque.test(test_input, test_output);
     //if ( std::isnan(epsilon_after) )
     //    std::cout << train_input.size() << " " << train_input.at(0).at(0) << std::endl;
 
@@ -451,4 +456,9 @@ void Network::reverse_transform_output(std::vector<double>& out_value) const
     }
 }
 
-// TODO: Make a normalization of input and iutput data, regulization, and randomazing of data order, also add event weighting
+// TODO: Make an event weighting, assembly of networks, also and randomazing of data order.
+// TODO: Make a cost and test method. First with regulization and second without.
+
+// Batch normalization? Normalization step that fixes the means and variances of each layer's inputs. Hence, every activation func should be normalized.
+// It means that active func's variables can be changed by data. For example, squeeze and shift sigmoid to transform data form range [a, b] to [-1, +1]
+// Actually, now it looks hard to realize. I should refactor whole code to good form.

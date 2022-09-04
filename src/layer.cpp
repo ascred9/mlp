@@ -183,7 +183,9 @@ void Layer::set_vectorB(const Vector& biases)
 }
 
 LayerDeque::LayerDeque():
-    m_step(0.5)
+    m_outsize(0),
+    m_step(0.5),
+    m_regulization_rate(0.)
 {
 }
 
@@ -213,6 +215,7 @@ void LayerDeque::add_layers(std::vector<unsigned int> topology)
         else
             iter->get()->set_func("sigmoid");
     }
+    m_outsize = m_layers.back()->size();
 }
 
 std::vector<double> LayerDeque::calculate(const std::vector<double>& input) const
@@ -222,9 +225,9 @@ std::vector<double> LayerDeque::calculate(const std::vector<double>& input) cons
 
     int size = input.size();
     Vector res( std::move(Eigen::Map<const Vector, Eigen::Aligned>(input.data(), size)) );
-    for (const auto& layer: m_layers)
+    for (const auto& pLayer: m_layers)
     {
-        res = layer->calculate(res);
+        res = pLayer->calculate(res);
     }
     return std::vector<double>(res.data(), res.data() + res.size());
 }
@@ -249,6 +252,7 @@ double LayerDeque::get_step() const
 
 void LayerDeque::print(std::ostream& os) const
 {
+    os << "regulization_rate " << m_regulization_rate << std::endl;
     for(const auto& pLayer: m_layers)
         pLayer->print(os);
 }
@@ -282,11 +286,16 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     m_loss_type = loss_type;
     if (m_loss_type == "LS")
     {
-        m_floss = [](const Vector& real, const Vector& output){return 0.5 * (output - real).array() * (output - real).array();};
-        m_fploss = [](const Vector& real, const Vector& output){return output-real;};
+        m_floss = [this](const Vector& real, const Vector& output){return 0.5 * ((output - real).array() * (output - real).array()).sum() / m_outsize ;};
+        m_fploss = [this](const Vector& real, const Vector& output){return (output-real) / m_outsize;};
     }
     else
         throw std::invalid_argument("this loss function isn't implemented");
+}
+
+void LayerDeque::set_regulization_rate(double regulization_rate)
+{
+    m_regulization_rate = regulization_rate;
 }
 
 void LayerDeque::set_step(const double step)
@@ -294,13 +303,12 @@ void LayerDeque::set_step(const double step)
     m_step = step;
 }
 
-double LayerDeque::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size) const
+double LayerDeque::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const
 {
     if (input.size() != output.size())
         throw std::invalid_argument("input size is not equal to output size of training data"); // TODO: make an global Exception static class
 
     double result = 0.;
-    double delta = 0.;
 
     for (unsigned int idx = 0; idx < input.size(); ++idx)
     {
@@ -311,20 +319,11 @@ double LayerDeque::test(const std::vector<std::vector<double>>& input, const std
         int out_size = output.at(idx).size();
         const Vector Yreal = Eigen::Map<const Vector, Eigen::Aligned>(output.at(idx).data(), out_size);
 
-        delta += m_floss(Yreal, Ycalc).sum();
+        result += m_floss(Yreal, Ycalc);
 
-        if ( (idx + 1) % batch_size == 0)
-        {
-            result += delta / batch_size;
-            
-            if (input.size() - idx < batch_size) // nothing to batch
-                break;
-
-            delta = 0;
-        }
     }
 
-    return sqrt(result /  output.size() * batch_size);
+    return sqrt(result / output.size() + get_L2_regulization());
 }
 
 void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size)
@@ -371,8 +370,9 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
         {
             for (unsigned int idl = 0; idl < m_layers.size() - 1; ++idl)
             {
-                m_layers.at(idl)->set_matrixW(m_layers.at(idl)->get_matrixW() - (m_step / batch_size) * gradients_W.at(idl));
-                m_layers.at(idl)->set_vectorB(m_layers.at(idl)->get_vectorB() - (m_step / batch_size) * gradients_B.at(idl));
+                double weight_decay = 1. - m_step * m_regulization_rate / m_outsize / batch_size;
+                m_layers.at(idl)->set_matrixW(weight_decay * m_layers.at(idl)->get_matrixW() - m_step * gradients_W.at(idl) / batch_size);
+                m_layers.at(idl)->set_vectorB(weight_decay * m_layers.at(idl)->get_vectorB() - m_step * gradients_B.at(idl) / batch_size);
             }
             if (input.size() - idx < batch_size) // nothing to batch
                 break;
@@ -428,4 +428,18 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
 
     std::reverse( std::begin(dL), std::end(dL) );
     return dL;
+}
+
+double LayerDeque::get_L2_regulization() const
+{
+    if (m_regulization_rate == 0)
+        return 0;
+
+    double regulization = 0;
+    for (const auto& pLayer: m_layers)
+    {
+        regulization += (pLayer->get_matrixW().array() * pLayer->get_matrixW().array()).sum();
+        regulization += (pLayer->get_vectorB().array() * pLayer->get_vectorB().array()).sum();
+    }
+    return 0.5 * m_regulization_rate * regulization / m_outsize;
 }

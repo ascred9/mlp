@@ -40,7 +40,6 @@ private:
     Vector m_vectorB;
     const double m_bias;
 
-
     const Vector calculate(const Vector& input) const;
     const Vector calculateZ(const Vector& inputX) const;
     const Vector calculateX(const Vector& inputZ) const;
@@ -70,11 +69,15 @@ class LayerDeque
 private:
     std::vector<LayerPtr> m_layers;
     std::string m_loss_type;
-    std::function<const Vector(const Vector&, const Vector&)> m_floss; // first is true val, second is estimation
+    std::function<double(const Vector&, const Vector&)> m_floss; // first is true val, second is estimation
     std::function<const Vector(const Vector&, const Vector&)> m_fploss; // first is true val, second is estimation
+    unsigned int m_outsize;
     double m_step;
+    double m_regulization_rate;
 
     std::vector<std::pair<Matrix, Vector>> get_gradient(const std::vector<double>& input, const std::vector<double>& output) const;
+    double get_L2_regulization() const;
+    double get_L2_regulization_prime() const;
 public:
     LayerDeque();
     ~LayerDeque();
@@ -88,7 +91,8 @@ public:
     void set_active_funcs(const std::vector<std::string>& active_funcs);
     void set_layers(const std::vector<std::vector<double>>& matrices, const std::vector<std::vector<double>>& biases); // first is vector of matrices with weights, second is bias vector
     void set_loss_func(const std::string& loss_type);
+    void set_regulization_rate(double regulization_rate);
     void set_step(const double step);
-    double test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 1) const;
+    double test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const;
     void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 1);
 };

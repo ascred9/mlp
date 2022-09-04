@@ -60,7 +60,7 @@ public:
     std::vector<double> get_result(const std::vector<double>& input) const;
     void print(std::ostream& os) const;
     void save() const;
-    double test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 1) const;
+    double test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const;
     void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 1, double split_mode = 0.5); // split mode is in [0, 1]
 };
 
