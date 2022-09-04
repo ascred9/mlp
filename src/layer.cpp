@@ -324,7 +324,7 @@ double LayerDeque::test(const std::vector<std::vector<double>>& input, const std
         }
     }
 
-    return result /  input.size() * batch_size;
+    return sqrt(result /  output.size() * batch_size);
 }
 
 void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size)

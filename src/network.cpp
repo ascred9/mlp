@@ -344,8 +344,8 @@ double Network::test(const std::vector<std::vector<double>>& input, const std::v
     if (input_size != output_size)
         throw Exception("size of input and output are not equal");
     
-    if (batch_size > input.size())
-        throw Exception("batch size is larger then input size");
+    if (batch_size > input.size() || batch_size == 0)
+        throw Exception("batch size is larger then input size or is zero");
     return m_layer_deque.test(input, output, batch_size);
 }
 
@@ -359,8 +359,8 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
     if (input_size != output_size)
         throw Exception("size of input and output are not equal");
     
-    if (batch_size > input.size())
-        throw Exception("batch size is larger then input size");
+    if (batch_size > input.size() || batch_size == 0)
+        throw Exception("batch size is larger then input size or iz zero");
         
     // Set config of input and output normalization transformation
     std::for_each(input.begin(), input.end(), [this](const std::vector<double>& vars){
@@ -377,13 +377,13 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
     std::for_each(m_out_transf.begin(), m_out_transf.end(), [](auto& pTransf){pTransf->set_config();});
 
     // Normalize input vectors
-    std::vector<std::vector<double>> transf_input = input;
+    std::vector<std::vector<double>> transf_input(input.begin(), input.end());
     std::for_each(transf_input.begin(), transf_input.end(),
         [this](std::vector<double>& in_vars){transform_input(in_vars);
     });
     
 
-    std::vector<std::vector<double>> transf_output = output;
+    std::vector<std::vector<double>> transf_output(output.begin(), output.end());
     std::for_each(transf_output.begin(), transf_output.end(),
         [this](std::vector<double>& out_vars){transform_output(out_vars);
     });
@@ -393,12 +393,11 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
     std::vector<std::vector<double>> test_input(transf_input.begin() + int(split_mode * input_size), transf_input.end());
     std::vector<std::vector<double>> test_output(transf_output.begin() + int(split_mode * output_size), transf_output.end());
 
-    if (batch_size == 0)
-        batch_size = 1;
-
     double epsilon_before = m_layer_deque.test(test_input, test_output, batch_size);
     m_layer_deque.train(train_input, train_output, batch_size);
     double epsilon_after = m_layer_deque.test(test_input, test_output, batch_size);
+    //if ( std::isnan(epsilon_after) )
+    //    std::cout << train_input.size() << " " << train_input.at(0).at(0) << std::endl;
 
     double reduce = std::abs(epsilon_after / epsilon_before);
 
@@ -410,6 +409,7 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
     // Stochastic descent
     double period = 10.;
     double step = 0.5 * (1. + cos(std::abs(m_nepoch / period - int(m_nepoch / period / M_PI) * M_PI )));
+    step = step == 0? 0.5: step;
     m_layer_deque.set_step(step);
 
     std::cout << "Nepoch: " << m_nepoch << " step: " << step << std::endl;

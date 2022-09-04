@@ -19,7 +19,7 @@ int main()
     std::uniform_real_distribution<> dis(-1.0, 1.0);
 
     clock_t start, end;
-    int Nepoch = 60;
+    int Nepoch = 90;
     int Nevent = 5e4;
     for (int iep = 0; iep < Nepoch; ++iep)
     {
