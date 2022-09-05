@@ -21,6 +21,7 @@ int main()
     clock_t start, end;
     int Nepoch = 90;
     int Nevent = 5e4;
+    int batch_size = 10;
     for (int iep = 0; iep < Nepoch; ++iep)
     {
         start = clock();
@@ -33,7 +34,7 @@ int main()
             in.push_back({x, y});
             out.push_back({z});
         }
-        net_ptr->train(in, out);
+        net_ptr->train(in, out, batch_size);
         end = clock();
         std::cout << "Training Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
     }
