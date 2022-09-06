@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.1)
 
-project(symbolic-arithmetic)
+project(network)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,3 +14,4 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 include_directories(include)
 
 add_executable(test main.cpp src/network.cpp src/layer.cpp src/transformation.cpp)
+add_library(mlp SHARED src/network.cpp src/layer.cpp src/transformation.cpp)
