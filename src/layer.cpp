@@ -10,7 +10,8 @@
  */
 
 
-#include "layer.h"
+#include "../include/layer.h"
+#include "unistd.h"
 
 Layer::Layer(unsigned int size):
     m_size(size),
@@ -134,6 +135,19 @@ void Layer::set_func(std::string name)
                 sigma = ep / (1. + ep);
             }
             return sigma * (1 - sigma);
+        };
+    }
+    else if (name == "th")
+    {
+        m_f =[](double x){
+            double em = std::exp(-x);
+            double ep = std::exp(x);
+            return (ep - em) / (ep + em);
+        };
+        m_fp = [](double x){
+            double em = std::exp(-x);
+            double ep = std::exp(x);
+            return 1 - pow( (ep - em) / (ep + em) , 2);
         };
     }
     else if (name == "bent")
@@ -286,8 +300,59 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     m_loss_type = loss_type;
     if (m_loss_type == "LS")
     {
-        m_floss = [this](const Vector& real, const Vector& output){return 0.5 * ((output - real).array() * (output - real).array()).sum() / m_outsize ;};
-        m_fploss = [this](const Vector& real, const Vector& output){return (output-real) / m_outsize;};
+        m_floss = [this](const Vector& real, const Vector& output){return 0.5 * ((output - real).array() * (output - real).array()) / m_outsize ;};
+        m_fploss = [this](const Vector& real, const Vector& output){return ((output-real).array()) / m_outsize;};
+    }
+    else if (m_loss_type == "LQ")
+    {
+        m_floss = [this](const Vector& real, const Vector& output){return 0.125 * ((output - real).array() * (output - real).array() * 
+            (output - real).array() * (output - real).array()) / m_outsize ;};
+        m_fploss = [this](const Vector& real, const Vector& output){return 0.5 * ((output - real).array() * (output - real).array() *
+            (output - real).array())/ m_outsize;};
+    }
+    else if (m_loss_type == "LSPL")
+    {
+        m_floss = [this](const Vector& real, const Vector& output){return 0.5 * ((output - real).array() * (output - real).array()) / m_outsize + 0.25 * (output-real).sum() / m_outsize;};
+        m_fploss = [this](const Vector& real, const Vector& output){return (output-real) / m_outsize + Vector::Constant(m_outsize, 0.25) / m_outsize;};
+    }
+    else if (m_loss_type == "ABS")
+    {
+        auto magn = [](double a) {return abs(a);};
+        m_floss = [this, magn](const Vector& real, const Vector& output){return (output - real).unaryExpr(magn) / m_outsize ;};
+        auto sign = [](double a) {
+            if ( a > 0)
+                return +1.;
+            else if ( a < 0)
+                return -1.;
+            else
+                return 0.;
+        };
+        m_fploss = [this, sign](const Vector& real, const Vector& output){return (output-real).unaryExpr(sign) / m_outsize;};
+    }
+    else if (m_loss_type == "RABS")
+    {
+        auto magn = [](double a) {return abs(a);};
+        m_floss = [this, magn](const Vector& real, const Vector& output){return (output-real).unaryExpr(magn).array() / real.array()
+             / m_outsize ;};
+        auto sign = [](double a) {
+            if ( a > 0)
+                return +1.;
+            else if ( a < 0)
+                return -1.;
+            else
+                return 0.;
+        };
+        m_fploss = [this, sign](const Vector& real, const Vector& output){return (output-real).unaryExpr(sign).array() / real.array()
+            / m_outsize;};
+    }
+    else if (m_loss_type == "GOOGLE")
+    {
+        double a = -20.;
+        double c = 200.;
+        auto f = [a, c](double x) {return abs(a-2.)/a * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2.) - 1.);};
+        auto df = [a, c](double x) {return  x/(c*c) * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2. - 1) );};
+        m_floss = [this, f](const Vector& real, const Vector& output) {return (output-real).unaryExpr(f) / m_outsize; };
+        m_fploss = [this, df](const Vector& real, const Vector& output) {return (output-real).unaryExpr(df) / m_outsize; };
     }
     else
         throw std::invalid_argument("this loss function isn't implemented");
@@ -303,10 +368,14 @@ void LayerDeque::set_step(const double step)
     m_step = step;
 }
 
-double LayerDeque::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const
+double LayerDeque::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+                        const std::vector<std::vector<double>>& weights) const
 {
     if (input.size() != output.size())
         throw std::invalid_argument("input size is not equal to output size of training data"); // TODO: make an global Exception static class
+
+    if (weights.size() != output.size())
+        throw std::invalid_argument("event weights size is not equal to output size of training data"); // TODO: make an global Exception static class
 
     double result = 0.;
 
@@ -319,18 +388,24 @@ double LayerDeque::test(const std::vector<std::vector<double>>& input, const std
         int out_size = output.at(idx).size();
         const Vector Yreal = Eigen::Map<const Vector, Eigen::Aligned>(output.at(idx).data(), out_size);
 
-        result += m_floss(Yreal, Ycalc);
+        int weights_size = output.at(idx).size();
+        const Vector W = Eigen::Map<const Vector, Eigen::Aligned>(weights.at(idx).data(), weights_size);
+
+        result += (W.array() * m_floss(Yreal, Ycalc).array()).sum();
 
     }
 
     return sqrt(result / output.size() + get_L2_regulization());
 }
 
-void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size)
+void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+                       const std::vector<std::vector<double>>& weights, unsigned int batch_size)
 {
     if (input.size() != output.size())
         throw std::invalid_argument("input size is not equal to output size of training data"); // TODO: make an global Exception static class
 
+    if (weights.size() != output.size())
+        throw std::invalid_argument("event weights size is not equal to output size of training data"); // TODO: make an global Exception static class
     // Reserve memory and define reset func
     std::vector<Matrix> gradients_W;
     std::vector<Vector> gradients_B;
@@ -358,7 +433,7 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
         if (m_layers.back()->size() != output.at(idx).size())
             throw std::invalid_argument("wrong output size"); // TODO: make an global Exception static class
 
-        std::vector<std::pair<Matrix, Vector>> gradient = get_gradient(input.at(idx), output.at(idx));
+        std::vector<std::pair<Matrix, Vector>> gradient = get_gradient(input.at(idx), output.at(idx), weights.at(idx));
 
         for (unsigned idl = 0; idl < m_layers.size() - 1; ++idl)
         {
@@ -382,7 +457,8 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
     }
 }
 
-std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vector<double>& input, const std::vector<double>& output) const
+std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vector<double>& input, const std::vector<double>& output,
+                                                                const std::vector<double>& weights) const
 {
     std::vector<std::pair<Matrix, Vector>> dL;
     dL.reserve(m_layers.size()-1);
@@ -392,6 +468,9 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
 
     int out_size = output.size();
     const Vector Y = Eigen::Map<const Vector, Eigen::Aligned>(output.data(), out_size);
+
+    int weights_size = weights.size();
+    const Vector W = Eigen::Map<const Vector, Eigen::Aligned>(weights.data(), weights_size);
 
     // Xi = f(sum( Wij * Zj) + Bi), i - output neuron, j - input neurons
     std::vector<std::shared_ptr<const Vector>> pZ_layers; // (Z0, Z1, Z2, ..., Zn), this vector has size m_layers.size()
@@ -415,7 +494,7 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
         }
     }
 
-    Vector delta = m_fploss(Y, *pX_layers.back()).array() * m_layers.back()->calculateXp( *pZ_layers.back() ).array();
+    Vector delta = (W.array() * m_fploss(Y, *pX_layers.back()).array()) * m_layers.back()->calculateXp( *pZ_layers.back() ).array();
     for (int idx = m_layers.size()-2; idx > -1; --idx)
     {
         dL.emplace_back( std::pair<Matrix, Vector>((*pX_layers.at(idx)).transpose() * delta, delta) );

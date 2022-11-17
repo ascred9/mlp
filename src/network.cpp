@@ -10,7 +10,7 @@
  */
 
 
-#include "network.h"
+#include "../include/network.h"
 
 static unsigned int MAX_INPUT_SIZE = 32;
 static unsigned int MAX_OUTPUT_SIZE = 32;
@@ -341,28 +341,46 @@ std::vector<double> Network::get_result(const std::vector<double>& input) const
     return transf_output;
 }
 
-double Network::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const
+double Network::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+                     const std::vector<std::vector<double>>& weights) const
 {
     const unsigned int input_size = input.size();
     const unsigned int output_size = output.size();
+    const unsigned int weights_size = weights.size();
     if (input_size == 0 || output_size == 0)
         throw Exception("incorrect size of input/output! it is zero!");
 
     if (input_size != output_size)
         throw Exception("size of input and output are not equal");
+
+    if (weights_size != output_size)
+        throw Exception("size of event weights and output are not equal");
     
-    return m_layer_deque.test(input, output);
+    return m_layer_deque.test(input, output, weights);
 }
 
-void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size, double split_mode)
+double Network::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const
+{
+    std::vector<double> one_vec(m_numb_output, 1);
+    std::vector<std::vector<double>> weights(output.size(), one_vec);
+
+    return test(input, output, weights);
+}
+
+void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+                    const std::vector<std::vector<double>>& weights, unsigned int batch_size, double split_mode)
 {
     const unsigned int input_size = input.size();
     const unsigned int output_size = output.size();
+    const unsigned int weights_size = weights.size();
     if (input_size == 0 || output_size == 0)
         throw Exception("incorrect size of input/output! it is zero!");
     
     if (input_size != output_size)
         throw Exception("size of input and output are not equal");
+
+    if (weights_size != output_size)
+        throw Exception("size of event weights and output are not equal");
     
     if (batch_size > input.size() || batch_size == 0)
         throw Exception("batch size is larger then input size or iz zero");
@@ -378,8 +396,8 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
             m_out_transf.at(idx)->check_limits(vars.at(idx));
     });
 
-    std::for_each(m_in_transf.begin(), m_in_transf.end(), [](auto& pTransf){pTransf->set_config();});
-    std::for_each(m_out_transf.begin(), m_out_transf.end(), [](auto& pTransf){pTransf->set_config();});
+    std::for_each(m_in_transf.begin(), m_in_transf.end(), [](TransformationPtr& pTransf){pTransf->set_config();});
+    std::for_each(m_out_transf.begin(), m_out_transf.end(), [](TransformationPtr& pTransf){pTransf->set_config();});
 
     // Normalize input vectors
     std::vector<std::vector<double>> transf_input(input.begin(), input.end());
@@ -388,21 +406,26 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
     });
     
 
+    // Normalize output vectors
     std::vector<std::vector<double>> transf_output(output.begin(), output.end());
     std::for_each(transf_output.begin(), transf_output.end(),
         [this](std::vector<double>& out_vars){transform_output(out_vars);
     });
 
+    // Normalize weights vector
+    // DONOT implemented
+
     std::vector<std::vector<double>> train_input(transf_input.begin(), transf_input.begin() + int(split_mode * input_size));
     std::vector<std::vector<double>> train_output(transf_output.begin(), transf_output.begin() + int(split_mode * output_size));
+    std::vector<std::vector<double>> train_weights(weights.begin(), weights.begin() + int(split_mode * input_size));
+    
     std::vector<std::vector<double>> test_input(transf_input.begin() + int(split_mode * input_size), transf_input.end());
     std::vector<std::vector<double>> test_output(transf_output.begin() + int(split_mode * output_size), transf_output.end());
+    std::vector<std::vector<double>> test_weights(weights.begin() + int(split_mode * input_size), weights.end());
 
-    double epsilon_before = m_layer_deque.test(test_input, test_output);
-    m_layer_deque.train(train_input, train_output, batch_size);
-    double epsilon_after = m_layer_deque.test(test_input, test_output);
-    //if ( std::isnan(epsilon_after) )
-    //    std::cout << train_input.size() << " " << train_input.at(0).at(0) << std::endl;
+    double epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
+    m_layer_deque.train(train_input, train_output, train_weights, batch_size);
+    double epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
 
     double reduce = std::abs(epsilon_after / epsilon_before);
 
@@ -412,9 +435,10 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
     */
 
     // Stochastic descent
-    double period = 10.;
-    double step = 0.5 * (1. + cos(std::abs(m_nepoch / period - int(m_nepoch / period / M_PI) * M_PI )));
-    step = step == 0? 0.5: step;
+    double period = 30.;
+    double amp = 0.25;
+    double step = amp * 0.5 * (1. + cos(std::abs(m_nepoch / period - int(m_nepoch / period / M_PI) * M_PI )));
+    step = step == 0? amp: step;
     m_layer_deque.set_step(step);
 
     std::cout << "Nepoch: " << m_nepoch << " step: " << step << std::endl;
@@ -423,15 +447,22 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
     ++m_nepoch;
 }
 
+void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+                    unsigned int batch_size, double split_mode)
+{
+    std::vector<double> one_vec(m_numb_output, 1);
+    std::vector<std::vector<double>> weights(output.size(), one_vec);
+
+    train(input, output, weights, batch_size, split_mode);
+}
+
 void Network::transform_input(std::vector<double>& in_value) const
 {
     if (in_value.size() != m_in_transf.size())
         throw Exception("size of input is not equal to transformations number");
 
     for (unsigned int idx = 0; idx < in_value.size(); ++idx)
-    {
         in_value.at(idx) = m_in_transf.at(idx)->transform(in_value.at(idx));
-    }
 }
 
 void Network::transform_output(std::vector<double>& out_value) const
@@ -440,9 +471,7 @@ void Network::transform_output(std::vector<double>& out_value) const
         throw Exception("size of output is not equal to transformations number");
 
     for (unsigned int idx = 0; idx < out_value.size(); ++idx)
-    {
         out_value.at(idx) = m_out_transf.at(idx)->transform(out_value.at(idx));
-    }
 }
 
 void Network::reverse_transform_output(std::vector<double>& out_value) const
@@ -451,12 +480,10 @@ void Network::reverse_transform_output(std::vector<double>& out_value) const
         throw Exception("size of normalized vector is not equal to transformations number");
 
     for (unsigned int idx = 0; idx < out_value.size(); ++idx)
-    {
         out_value.at(idx) = m_out_transf.at(idx)->reverse_transform(out_value.at(idx));
-    }
 }
 
-// TODO: Make an event weighting, assembly of networks, also and randomazing of data order.
+// TODO: Make an event weighting (+weight normalization), assembly of networks, also and randomazing of data order.
 // TODO: Make a cost and test method. First with regulization and second without.
 
 // Batch normalization? Normalization step that fixes the means and variances of each layer's inputs. Hence, every activation func should be normalized.
