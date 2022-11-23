@@ -282,9 +282,7 @@ Network* Network::create(unsigned int numb_input, unsigned int numb_output, cons
     net->m_layer_deque.generate_weights("Xavier");
 
     net->print(std::cout);
-    std::ofstream fout(net->m_out_file_name.c_str());
-    net->print(fout);
-    fout.close();
+    net->save();
     return net;
 }
 

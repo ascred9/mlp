@@ -18,13 +18,14 @@
 #include <numeric>
 #include <vector>
 
-#include "layer.h"
+#include "layer_deque.h"
+#include "transformation.h"
 
 # define M_PI           3.14159265358979323846  /* pi */
 
+
 class Network
 {
-private:
     unsigned int m_numb_input;
     unsigned int m_numb_output;
     unsigned int m_nepoch;
@@ -34,7 +35,7 @@ private:
     std::vector<std::string> m_active_funcs;
     std::vector<double> m_input;
     std::vector<double> m_output;
-    LayerDeque m_layer_deque;
+    LayerDeque<Layer> m_layer_deque;
     std::vector<TransformationPtr> m_in_transf;
     std::vector<TransformationPtr> m_out_transf;
 
