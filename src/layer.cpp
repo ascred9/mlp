@@ -197,12 +197,10 @@ double Layer::get_regulization()
     return regulization;
 }
 
-std::pair<Matrix, Vector> ad_gradient(double reg, const std::pair<Matrix, Vector>& dL)
+void Layer::add_gradient(double reg, const std::pair<Matrix, Vector>& dL)
 {
-    std::pair<Matrix, Vector> grad;
-    grad.first = dL.first + reg * get_matrixW();
-    grad.second = dL.second + reg * get_vectorB();
-    return grad;
+    m_gradW += dL.first + reg * get_matrixW();
+    m_gradB += dL.second + reg * get_vectorB();
 }
 
 void Layer::print(std::ostream &os) const
@@ -252,8 +250,17 @@ bool Layer::read(std::istream& fin)
     return true;
 }
 
-void Layer::update_weights(double step, const Matrix& gradW, const Vector& gradB)
+void Layer::reset_grads()
 {
-    m_matrixW -= step * gradW;
-    m_vectorB -= step * gradB;
+    m_gradW = Matrix::Zero(m_size, m_out_size);
+    m_gradB = Vector::Zero(m_out_size);
+}
+
+void Layer::update_weights(double step)
+{
+    m_matrixW -= step * m_gradW;
+    m_vectorB -= step * m_gradB;
+
+    m_gradW *= 0.;
+    m_gradB *= 0.;
 }

@@ -56,11 +56,12 @@ protected:
 public:
     Layer(unsigned int size);
     ~Layer();
-    virtual add_gradient(double reg, const std::pair<Matrix, Vector>& dL);
+    virtual void add_gradient(double reg, const std::pair<Matrix, Vector>& dL);
     virtual void generate_weights(const std::string& init_type);
     virtual double get_regulization();
     virtual void print(std::ostream& os) const;
     virtual bool read(std::istream& fin);
+    virtual void reset_grads();
     virtual void update(){};
     virtual void update_weights(double step);
 };

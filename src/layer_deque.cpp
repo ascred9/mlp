@@ -242,7 +242,10 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
     auto set_trainMode = [this] (bool flag)
     {
         for (auto &layer: m_layers)
+        {
             layer->m_trainMode = flag;
+            layer->reset_grads();
+        }
     };
 
     set_trainMode(true);
@@ -267,7 +270,7 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
             for (unsigned idl = 0; idl < m_layers.size() - 1; ++idl)
             {
                 //Calculate summary layer gradient with likelihood and regulization
-                dL.at(idl).fisrt /= (minibatch_size * batch_size);
+                dL.at(idl).first /= (minibatch_size * batch_size);
                 dL.at(idl).second /= (minibatch_size * batch_size);
                 m_layers.at(idl)->add_gradient(m_regulization_rate, dL.at(idl));
             }

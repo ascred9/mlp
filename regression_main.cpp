@@ -33,14 +33,12 @@ int process(TString filename)
     tph->SetBranchAddress("phi",	&phi);
     tph->SetBranchAddress("rho",	&rho);
 
-    BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
+    //BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
     //net_ptr->create(5, 1, {10, 5}, "build/bnetwork.txt"); return 1;
-    net_ptr->init_from_file("build/bnetwork.txt", "build/btest.txt");
+    //net_ptr->init_from_file("build/bnetwork.txt", "build/btest.txt");
+    NetworkPtr net_ptr = std::make_unique<Network>();
+    net_ptr->init_from_file("build/network.txt", "build/test.txt");
 
-    //NetworkPtr net_ptr( Network::create(5, 1, {3}, "build/network.txt") ); return 1;
-    //NetworkPtr net_ptr( Network::init_from_file("network.txt", "test.txt") );
-    //NetworkPtr net_ptr( Network::init_from_file("build/network.txt", "build/test.txt") );
-    //NetworkPtr net_ptr( Network::init_from_file("build/test.txt", "build/test.txt") );
     if (net_ptr == nullptr)
         return -1;
 
