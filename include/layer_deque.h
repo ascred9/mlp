@@ -9,6 +9,7 @@
  * 
  */
 
+#pragma once
 
 #include <algorithm>
 #include <cmath>
@@ -19,18 +20,19 @@
 #include <stdexcept>
 #include <vector>
 
-#include "layer.h"
 #include "eigen-3.4.0/Eigen/Core"
 
 typedef Eigen::Matrix<double, 1, Eigen::Dynamic> Vector;
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 
+#include "layer.h"
+#include "blayer.h"
 
-template <class LayerType>
+
 class LayerDeque
 {
 private:
-    std::vector<std::shared_ptr<LayerType>> m_layers;
+    std::vector<std::shared_ptr<Layer>> m_layers;
     std::string m_loss_type;
     std::function<const Vector(const Vector&, const Vector&)> m_floss; // first is true val, second is estimation
     std::function<const Vector(const Vector&, const Vector&)> m_fploss; // first is true val, second is estimation
@@ -40,18 +42,23 @@ private:
 
     std::vector<std::pair<Matrix, Vector>> get_gradient(const std::vector<double>& input, const std::vector<double>& output,
                                                         const std::vector<double>& weights) const;
-    double get_L2_regulization() const;
-    double get_L2_regulization_prime() const;
+    std::vector<std::pair<Matrix, Vector>> get_gradient_reg(const std::vector<double>& weights) const;
+    double get_regulization() const;
 public:
     LayerDeque();
+
     ~LayerDeque();
     
-    void add_layers(std::vector<unsigned int> topology);
+    template <class LayerT>
+    typename std::enable_if<std::is_base_of<Layer, LayerT>::value, void>::type
+    add_layers(std::vector<unsigned int> topology);
+
     std::vector<double> calculate(const std::vector<double>& input) const;
     void clear();
     void generate_weights(const std::string& init_type);
     double get_step() const;
     void print(std::ostream& os) const;
+    bool read_layer(std::istream& fin, int layer_id);
     void set_active_funcs(const std::vector<std::string>& active_funcs);
     void set_layers(const std::vector<std::vector<double>>& matrices, const std::vector<std::vector<double>>& biases); // first is vector of matrices with weights, second is bias vector
     void set_loss_func(const std::string& loss_type);
@@ -60,5 +67,6 @@ public:
     double test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                 const std::vector<std::vector<double>>& weights) const;
     void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
-               const std::vector<std::vector<double>>& weights, unsigned int batch_size = 1);
+               const std::vector<std::vector<double>>& weights, unsigned int batch_size = 1, unsigned int minibatch_size = 1);
 };
+

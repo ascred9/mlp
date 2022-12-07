@@ -12,6 +12,7 @@
 
 #include "../include/layer.h"
 
+
 Layer::Layer(unsigned int size):
     m_size(size),
     m_in_size(0),
@@ -37,7 +38,7 @@ const Vector Layer::calculateZ(const Vector& inputX) const
     if (m_out_size == 0 ) // end layer
         return inputX;
 
-    return (inputX * m_matrixW + m_vectorB * m_bias).transpose();
+    return (inputX * get_matrixW() + get_vectorB() * m_bias).transpose();
 }
 
 const Vector Layer::calculateX(const Vector& inputZ) const
@@ -50,23 +51,6 @@ const Vector Layer::calculateXp(const Vector& inputZ) const
     return inputZ.unaryExpr(m_fp);
 }
 
-void Layer::generate_weights(const std::string& init_type)
-{
-    if (m_out_size == 0) // end layer
-        return;
-
-    m_matrixW = Matrix::Random(m_size, m_out_size);
-    m_vectorB = Vector::Random(m_out_size);
-    double coef;
-    if (init_type == "Xavier")
-        coef = std::sqrt( 6. / (m_size + m_out_size));
-    else
-        coef = 1;
-
-    m_matrixW *= coef;
-    m_vectorB *= coef;
-}
-
 const Matrix& Layer::get_matrixW() const
 {
     return m_matrixW;
@@ -75,14 +59,6 @@ const Matrix& Layer::get_matrixW() const
 const Vector& Layer::get_vectorB() const
 {
     return m_vectorB;
-}
-
-void Layer::print(std::ostream &os) const
-{
-    if (m_out_size == 0)
-        return;
-    os << "[ " << m_matrixW << " ]" << std::endl;
-    os << "{ " << m_vectorB << " }" << std::endl;
 }
 
 const unsigned int& Layer::size() const
@@ -193,4 +169,91 @@ void Layer::set_vectorB(const Vector& biases)
         throw std::invalid_argument("size of input vector is not equal to size of create layer");
 
     m_vectorB = biases;
+}
+
+void Layer::generate_weights(const std::string& init_type)
+{
+    if (m_out_size == 0) // end layer
+        return;
+
+    m_matrixW = Matrix::Random(m_size, m_out_size);
+    m_vectorB = Vector::Random(m_out_size);
+    double coef;
+    if (init_type == "Xavier")
+        coef = std::sqrt( 6. / (m_size + m_out_size));
+    else
+        coef = 1;
+
+    m_matrixW *= coef;
+    m_vectorB *= coef;
+}
+
+double Layer::get_regulization()
+{
+    double regulization = 0.;
+    regulization += get_matrixW().array().pow(2).sum();
+    regulization += get_vectorB().array().pow(2).sum();
+    regulization *= 0.5;
+    return regulization;
+}
+
+std::pair<Matrix, Vector> ad_gradient(double reg, const std::pair<Matrix, Vector>& dL)
+{
+    std::pair<Matrix, Vector> grad;
+    grad.first = dL.first + reg * get_matrixW();
+    grad.second = dL.second + reg * get_vectorB();
+    return grad;
+}
+
+void Layer::print(std::ostream &os) const
+{
+    if (m_out_size == 0)
+        return;
+
+    os << "layer " << std::endl;
+    os << "[ " << m_matrixW << " ]" << std::endl;
+    os << "{ " << m_vectorB << " }" << std::endl;
+}
+
+bool Layer::read(std::istream& fin)
+{
+    std::string data;
+
+    int data_weights_size = m_size*m_out_size;
+    std::vector<double> weights;
+    weights.reserve(data_weights_size);
+
+    int data_biases_size = m_out_size;
+    std::vector<double> biases;
+    biases.reserve(data_biases_size);
+    
+    auto read_matrix = [&](std::string before, std::vector<double>& v){
+        while (fin >> data)
+        {
+            if (data == before)
+                break;
+            v.emplace_back(std::stod(data));
+        }
+    };
+
+    for (int i=0; i < 2; ++i)
+    {
+        fin >> data;
+        if (data == "[")
+            read_matrix("]", weights);
+
+        if (data == "{")
+            read_matrix("}", biases);
+    }
+
+    set_matrixW(weights);
+    set_vectorB(biases);
+
+    return true;
+}
+
+void Layer::update_weights(double step, const Matrix& gradW, const Vector& gradB)
+{
+    m_matrixW -= step * gradW;
+    m_vectorB -= step * gradB;
 }

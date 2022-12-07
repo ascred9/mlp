@@ -9,6 +9,7 @@
  * 
  */
 
+#pragma once
 
 #include <memory>
 
@@ -20,29 +21,30 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 
 class Layer
 {
-    template <class LayerType>
     friend class LayerDeque;
 
+protected:
     unsigned int m_size;
     unsigned int m_in_size;
     unsigned int m_out_size;
+    bool m_trainMode = false;
 
     std::function<double(double)> m_f;
     std::function<double(double)> m_fp;
 
     Matrix m_matrixW;
     Vector m_vectorB;
+    Matrix m_gradW;
+    Vector m_gradB;
     const double m_bias;
 
     const Vector calculate(const Vector& input) const;
     const Vector calculateZ(const Vector& inputX) const;
     const Vector calculateX(const Vector& inputZ) const;
     const Vector calculateXp(const Vector& inputZ) const;
-    void generate_weights(const std::string& init_type);
-    const Matrix& get_matrixW() const;
-    const Vector& get_vectorB() const;
-    virtual void print(std::ostream& os) const;
-    const unsigned int& size() const;
+    virtual const Matrix& get_matrixW() const;
+    virtual const Vector& get_vectorB() const;
+    const unsigned int& size() const; 
     void set_in_size(unsigned int in_size);
     void set_out_size(unsigned int out_size);
     void set_func(std::string func_name);
@@ -54,6 +56,13 @@ class Layer
 public:
     Layer(unsigned int size);
     ~Layer();
+    virtual add_gradient(double reg, const std::pair<Matrix, Vector>& dL);
+    virtual void generate_weights(const std::string& init_type);
+    virtual double get_regulization();
+    virtual void print(std::ostream& os) const;
+    virtual bool read(std::istream& fin);
+    virtual void update(){};
+    virtual void update_weights(double step);
 };
 
 using LayerPtr = std::shared_ptr<Layer>;

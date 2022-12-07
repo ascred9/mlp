@@ -4,6 +4,7 @@
 #include <iomanip>
 
 #include "include/network.h"
+#include "include/bnetwork.h"
 
 #include "TFile.h"
 #include "TTree.h"
@@ -32,9 +33,13 @@ int process(TString filename)
     tph->SetBranchAddress("phi",	&phi);
     tph->SetBranchAddress("rho",	&rho);
 
-    //NetworkPtr net_ptr( Network::create(5, 1, {10, 5}, "build/network.txt") ); return 1;
+    BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
+    //net_ptr->create(5, 1, {10, 5}, "build/bnetwork.txt"); return 1;
+    net_ptr->init_from_file("build/bnetwork.txt", "build/btest.txt");
+
+    //NetworkPtr net_ptr( Network::create(5, 1, {3}, "build/network.txt") ); return 1;
     //NetworkPtr net_ptr( Network::init_from_file("network.txt", "test.txt") );
-    NetworkPtr net_ptr( Network::init_from_file("build/network.txt", "build/test.txt") );
+    //NetworkPtr net_ptr( Network::init_from_file("build/network.txt", "build/test.txt") );
     //NetworkPtr net_ptr( Network::init_from_file("build/test.txt", "build/test.txt") );
     if (net_ptr == nullptr)
         return -1;
@@ -47,7 +52,8 @@ int process(TString filename)
     clock_t start, end;
     int Nepoch = 1*94;
     int Nentries = tph->GetEntries();
-    int batch_size = 4;
+    int batch_size = 1;
+    int minibatch_size = 10;
     double T = 3;
     std::vector<std::vector<double>> in, out, weights;
 
@@ -128,7 +134,8 @@ int process(TString filename)
     for (int iep = 0; iep < Nepoch; ++iep)
     {
     	start = clock();
-        net_ptr->train(in, out, weights, batch_size);
+        //net_ptr->train(in, out, weights, batch_size);
+        net_ptr->train(in, out, batch_size, minibatch_size);
         end = clock();
         std::cout << "Training Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
     }
@@ -185,6 +192,7 @@ int process(TString filename)
     fout.close();
     end = clock();
     std::cout << "Processing Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
+    net_ptr->print(std::cout);
 
     return 0;
 }

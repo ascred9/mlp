@@ -1,5 +1,5 @@
 /**
- * @file network.h
+ * @file network.cpp
  * @author Aleksandr Semenov (ascred9@gmail.com), research scientist in HEP from BINP
  * @brief 
  * @version 0.1
@@ -32,6 +32,11 @@ Network::~Network()
 {
 }
 
+void Network::add_layers()
+{
+    m_layer_deque.add_layers<Layer>(m_topology);
+}
+
 void Network::add_in_transform(const std::string& type)
 {
     if (type == "linear")
@@ -56,42 +61,39 @@ void Network::add_out_transform(const std::string& type, const std::vector<doubl
         m_out_transf.push_back(std::make_shared<LinearTransformation>(vars.front(), vars.back()));
 }
 
-Network* Network::init_from_file(const std::string& in_file_name, const std::string& out_file_name="")
+bool Network::init_from_file(const std::string& in_file_name, const std::string& out_file_name="")
 {
     std::ifstream fin(in_file_name);
     if (!fin.is_open())
     {
         std::cout << "Failed to open: " << in_file_name << std::endl;
-        return nullptr;
+        return false;
     }
     
-    Network* net = new Network();
-
     if (out_file_name != "")
-        net->m_out_file_name = out_file_name;
+        m_out_file_name = out_file_name;
     else
-        net->m_out_file_name = "network.txt";
+        m_out_file_name = "network.txt";
 
     std::string data;
-    std::vector<std::vector<double>> matrices;
-    std::vector<std::vector<double>> vectors;
+    unsigned int deep;
+    unsigned int layer_id = 0;
     while (fin >> data)
     {
         if (data == "numb_input")
         {
-            fin >> net->m_numb_input;
+            fin >> m_numb_input;
             continue;
         }
         if (data == "numb_output")
         {
-            fin >> net->m_numb_output;
+            fin >> m_numb_output;
             continue;
         }
-        unsigned int deep;
         if (data == "deep")
         {
             fin >> deep;
-            net->m_topology.reserve(deep);
+            m_topology.reserve(deep);
             continue;
         }
         if (data == "topology" && deep > 0)
@@ -100,9 +102,9 @@ Network* Network::init_from_file(const std::string& in_file_name, const std::str
             for (unsigned int idx = 0; idx < deep; ++idx)
             {
                 fin >> size;
-                net->m_topology.emplace_back(size);
+                m_topology.emplace_back(size);
             }
-            net->m_layer_deque.add_layers(net->m_topology);
+            add_layers();
             continue;
         }
         if (data == "active_funcs" && deep > 0)
@@ -110,68 +112,48 @@ Network* Network::init_from_file(const std::string& in_file_name, const std::str
             for (unsigned int i=0; i<deep; ++i)
             {
                 fin >> data;
-                net->m_active_funcs.push_back(data);
+                m_active_funcs.push_back(data);
             }
-            net->m_layer_deque.set_active_funcs(net->m_active_funcs);
+            m_layer_deque.set_active_funcs(m_active_funcs);
             continue;
         }
-        if (data == "[")
+        if (data == "layer")
         {
-            std::vector<double> weights;
-            while (true)
-            {
-                fin >> data;
-                if (data == "]")
-                    break;
-                double weight = std::stod(data);
-                weights.push_back(weight);
-            }
-            matrices.push_back(weights);
-            continue;
-        }
-        if (data == "{")
-        {
-            std::vector<double> biases;
-            while (true)
-            {
-                fin >> data;
-                if (data == "}")
-                    break;
-                double bias = std::stod(data);
-                biases.push_back(bias);
-            }
-            vectors.push_back(biases);
+            if (layer_id + 1 >= deep)
+                continue;
+            m_layer_deque.read_layer(fin, layer_id);
+            ++layer_id;
             continue;
         }
         if (data == "nepoch")
         {
-            fin >> net->m_nepoch;
+            fin >> m_nepoch;
             continue;
         }
         if (data == "loss_func" )
         {
             fin >> data;
-            net->m_loss = data;
-            net->m_layer_deque.set_loss_func(data);
+            m_loss = data;
+            m_layer_deque.set_loss_func(data);
             continue;
         }
         if (data == "step" )
         {
             double step;
             fin >> step;
-            net->m_layer_deque.set_step(step);
+            m_layer_deque.set_step(step);
             continue;
         }
         if (data == "regulization_rate")
         {
             double rate;
             fin >> rate;
-            net->m_layer_deque.set_regulization_rate(rate);
+            m_layer_deque.set_regulization_rate(rate);
             continue;
         }
         if (data == "input_transforms" || data == "output_transforms")
         {
-            unsigned int ntransforms = (data == "input_transforms")? net->m_numb_input: net->m_numb_output;
+            unsigned int ntransforms = (data == "input_transforms")? m_numb_input: m_numb_output;
             for (unsigned int idx = 0; idx < ntransforms; ++idx)
             {
                 std::string transform_type;
@@ -182,10 +164,10 @@ Network* Network::init_from_file(const std::string& in_file_name, const std::str
                 if (nvars == 0)
                 {
                     if (data == "input_transforms")
-                        net->add_in_transform(transform_type);
+                        add_in_transform(transform_type);
 
                     if (data == "output_transforms")
-                        net->add_out_transform(transform_type);
+                        add_out_transform(transform_type);
                     
                     continue;
                 }
@@ -200,10 +182,10 @@ Network* Network::init_from_file(const std::string& in_file_name, const std::str
                     }
 
                     if (data == "input_transforms")
-                        net->add_in_transform(transform_type, vars);
+                        add_in_transform(transform_type, vars);
 
                     if (data == "output_transforms")
-                        net->add_out_transform(transform_type, vars);
+                        add_out_transform(transform_type, vars);
                     
                     continue;
                 }
@@ -211,25 +193,22 @@ Network* Network::init_from_file(const std::string& in_file_name, const std::str
             continue;
         }
     }
-    if (net->m_in_transf.size() != net->m_numb_input)
+    if (m_in_transf.size() != m_numb_input)
         throw Exception("number of input transformations is not equal to number of input");
     
-    if (net->m_out_transf.size() != net->m_numb_output)
+    if (m_out_transf.size() != m_numb_output)
         throw Exception("number of output transformations is not equal to number of output");
 
     // TODO: add more validations
 
     fin.close();
-    net->m_layer_deque.set_layers(matrices, vectors);
-    net->print(std::cout);
-    std::ofstream fout(net->m_out_file_name.c_str());
-    net->print(fout);
-    fout.close();
+    print(std::cout);
+    save();
 
-    return net;
+    return true;
 }
 
-Network* Network::create(unsigned int numb_input, unsigned int numb_output, const std::vector<unsigned int>& hidden_topology, const std::string& out_file_name)
+bool Network::create(unsigned int numb_input, unsigned int numb_output, const std::vector<unsigned int>& hidden_topology, const std::string& out_file_name)
 {
     // TODO: move to assert?
     if (numb_input == 0 || numb_input > MAX_INPUT_SIZE)
@@ -253,37 +232,36 @@ Network* Network::create(unsigned int numb_input, unsigned int numb_output, cons
     if (out_file_name.size() == 0 || !out_file_name.find(".txt"))
         throw Exception("incorrect output file name!");
 
-    Network* net = new Network();
-    net->m_numb_input = numb_input;
-    net->m_numb_output = numb_output;
-    net->m_topology.reserve(hidden_topology.size() + 2); // plus input and iutput layer
-    net->m_topology.emplace_back(numb_input);
-    net->m_topology.insert(end(net->m_topology), begin(hidden_topology), end(hidden_topology));
-    net->m_topology.emplace_back(numb_output);
-    net->m_out_file_name = out_file_name;
+    m_numb_input = numb_input;
+    m_numb_output = numb_output;
+    m_topology.reserve(hidden_topology.size() + 2); // plus input and iutput layer
+    m_topology.emplace_back(numb_input);
+    m_topology.insert(end(m_topology), begin(hidden_topology), end(hidden_topology));
+    m_topology.emplace_back(numb_output);
+    m_out_file_name = out_file_name;
 
-    net->m_layer_deque.add_layers(net->m_topology);
+    add_layers();
 
-    net->m_active_funcs.push_back("linear");
+    m_active_funcs.push_back("linear");
     for (unsigned int idx = 0; idx < hidden_topology.size(); ++idx)
-        net->m_active_funcs.push_back("sigmoid");
-    net->m_active_funcs.push_back("linear");
+        m_active_funcs.push_back("sigmoid");
+    m_active_funcs.push_back("linear");
 
-    for (unsigned int idx = 0; idx < net->m_numb_input; ++idx)
-        net->add_in_transform("linear");
+    for (unsigned int idx = 0; idx < m_numb_input; ++idx)
+        add_in_transform("linear");
 
-    for (unsigned int idx = 0; idx < net->m_numb_output; ++idx)
-        net->add_out_transform("linear");
+    for (unsigned int idx = 0; idx < m_numb_output; ++idx)
+        add_out_transform("linear");
 
-    net->m_nepoch = 0;
-    net->m_loss = "LS";
-    net->m_layer_deque.set_loss_func("LS");
+    m_nepoch = 0;
+    m_loss = "LS";
+    m_layer_deque.set_loss_func("LS");
 
-    net->m_layer_deque.generate_weights("Xavier");
+    m_layer_deque.generate_weights("Xavier");
 
-    net->print(std::cout);
-    net->save();
-    return net;
+    print(std::cout);
+    save();
+    return true;
 }
 
 void Network::print(std::ostream& os) const
@@ -366,7 +344,7 @@ double Network::test(const std::vector<std::vector<double>>& input, const std::v
 }
 
 void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
-                    const std::vector<std::vector<double>>& weights, unsigned int batch_size, double split_mode)
+                    const std::vector<std::vector<double>>& weights, unsigned int batch_size, unsigned int minibatch_size, double split_mode)
 {
     const unsigned int input_size = input.size();
     const unsigned int output_size = output.size();
@@ -422,7 +400,7 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
     std::vector<std::vector<double>> test_weights(weights.begin() + int(split_mode * input_size), weights.end());
 
     double epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
-    m_layer_deque.train(train_input, train_output, train_weights, batch_size);
+    m_layer_deque.train(train_input, train_output, train_weights, batch_size, minibatch_size);
     double epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
 
     double reduce = std::abs(epsilon_after / epsilon_before);
@@ -446,12 +424,12 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
 }
 
 void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
-                    unsigned int batch_size, double split_mode)
+                    unsigned int batch_size, unsigned int minibatch_size, double split_mode)
 {
     std::vector<double> one_vec(m_numb_output, 1);
     std::vector<std::vector<double>> weights(output.size(), one_vec);
 
-    train(input, output, weights, batch_size, split_mode);
+    train(input, output, weights, batch_size, minibatch_size, split_mode);
 }
 
 void Network::transform_input(std::vector<double>& in_value) const

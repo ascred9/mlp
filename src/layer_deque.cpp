@@ -1,5 +1,5 @@
 /**
- * @file layer.cpp
+ * @file layer_deque.cpp
  * @author Aleksandr Semenov (ascred9@gmail.com), research scientist in HEP from BINP
  * @brief 
  * @version 0.1
@@ -13,27 +13,30 @@
 #include "../include/layer_deque.h"
 
 
-template class LayerDeque<Layer>;
+template
+void LayerDeque::add_layers<Layer>(std::vector<unsigned int> topology);
 
-template <class LayerType>
-LayerDeque<LayerType>::LayerDeque():
+template
+void LayerDeque::add_layers<BayesianLayer>(std::vector<unsigned int> topology);
+
+LayerDeque::LayerDeque():
     m_outsize(0),
     m_step(0.5),
     m_regulization_rate(0.)
 {
 }
 
-template <class LayerType>
-LayerDeque<LayerType>::~LayerDeque()
+LayerDeque::~LayerDeque()
 {
 }
 
-template <class LayerType>
-void LayerDeque<LayerType>::add_layers(std::vector<unsigned int> topology)
+template <class LayerT>
+typename std::enable_if<std::is_base_of<Layer, LayerT>::value, void>::type
+LayerDeque::add_layers(std::vector<unsigned int> topology)
 {
     m_layers.reserve(topology.size());
     std::transform(begin(topology), end(topology), std::back_inserter(m_layers), [](unsigned int layer_size){
-        return std::make_shared<LayerType>(layer_size);
+        return std::make_shared<LayerT>(layer_size);
     });
     for (auto iter = begin(m_layers); iter != end(m_layers); ++iter)
     {
@@ -56,8 +59,7 @@ void LayerDeque<LayerType>::add_layers(std::vector<unsigned int> topology)
     m_outsize = m_layers.back()->size();
 }
 
-template <class LayerType>
-std::vector<double> LayerDeque<LayerType>::calculate(const std::vector<double>& input) const
+std::vector<double> LayerDeque::calculate(const std::vector<double>& input) const
 {
     if (m_layers.front()->size() != input.size())
         throw std::invalid_argument("wrong input size, it is not equal to input layer size"); // TODO: make an global Exception static class
@@ -71,14 +73,12 @@ std::vector<double> LayerDeque<LayerType>::calculate(const std::vector<double>& 
     return std::vector<double>(res.data(), res.data() + res.size());
 }
 
-template <class LayerType>
-void LayerDeque<LayerType>::clear()
+void LayerDeque::clear()
 {
     m_layers.clear();
 }
 
-template <class LayerType>
-void LayerDeque<LayerType>::generate_weights(const std::string& init_type)
+void LayerDeque::generate_weights(const std::string& init_type)
 {
     for (auto& layer: m_layers)
     {
@@ -86,22 +86,24 @@ void LayerDeque<LayerType>::generate_weights(const std::string& init_type)
     }
 }
 
-template <class LayerType>
-double LayerDeque<LayerType>::get_step() const
+double LayerDeque::get_step() const
 {
     return m_step;
 }
 
-template <class LayerType>
-void LayerDeque<LayerType>::print(std::ostream& os) const
+void LayerDeque::print(std::ostream& os) const
 {
     os << "regulization_rate " << m_regulization_rate << std::endl;
     for(const auto& pLayer: m_layers)
         pLayer->print(os);
 }
 
-template <class LayerType>
-void LayerDeque<LayerType>::set_active_funcs(const std::vector<std::string>& active_funcs)
+bool LayerDeque::read_layer(std::istream& fin, int layer_id)
+{
+    return m_layers.at(layer_id)->read(fin);
+}
+
+void LayerDeque::set_active_funcs(const std::vector<std::string>& active_funcs)
 {
     if (active_funcs.size() != m_layers.size())
         throw std::invalid_argument("number of bias is not equal to number of transform matrices");
@@ -110,8 +112,7 @@ void LayerDeque<LayerType>::set_active_funcs(const std::vector<std::string>& act
         m_layers.at(idx)->set_func(active_funcs.at(idx));
 }
 
-template <class LayerType>
-void LayerDeque<LayerType>::set_layers(const std::vector<std::vector<double>>& matrices, const std::vector<std::vector<double>>& biases)
+void LayerDeque::set_layers(const std::vector<std::vector<double>>& matrices, const std::vector<std::vector<double>>& biases)
 {
     if (matrices.size() != biases.size())
         throw std::invalid_argument("number of bias is not equal to number of transform matrices");
@@ -126,8 +127,7 @@ void LayerDeque<LayerType>::set_layers(const std::vector<std::vector<double>>& m
     }
 }
 
-template <class LayerType>
-void LayerDeque<LayerType>::set_loss_func(const std::string& loss_type)
+void LayerDeque::set_loss_func(const std::string& loss_type)
 {
     m_loss_type = loss_type;
     if (m_loss_type == "LS")
@@ -190,27 +190,24 @@ void LayerDeque<LayerType>::set_loss_func(const std::string& loss_type)
         throw std::invalid_argument("this loss function isn't implemented");
 }
 
-template <class LayerType>
-void LayerDeque<LayerType>::set_regulization_rate(double regulization_rate)
+void LayerDeque::set_regulization_rate(double regulization_rate)
 {
     m_regulization_rate = regulization_rate;
 }
 
-template <class LayerType>
-void LayerDeque<LayerType>::set_step(const double step)
+void LayerDeque::set_step(const double step)
 {
     m_step = step;
 }
 
-template <class LayerType>
-double LayerDeque<LayerType>::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+double LayerDeque::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                         const std::vector<std::vector<double>>& weights) const
 {
     if (input.size() != output.size())
-        throw std::invalid_argument("input size is not equal to output size of training data"); // TODO: make an global Exception static class
+        throw std::invalid_argument("input size is not equal to output size of testing data"); // TODO: make an global Exception static class
 
     if (weights.size() != output.size())
-        throw std::invalid_argument("event weights size is not equal to output size of training data"); // TODO: make an global Exception static class
+        throw std::invalid_argument("event weights size is not equal to output size of testing data"); // TODO: make an global Exception static class
 
     double result = 0.;
 
@@ -230,37 +227,27 @@ double LayerDeque<LayerType>::test(const std::vector<std::vector<double>>& input
 
     }
 
-    return sqrt(result / output.size() + get_L2_regulization());
+    return sqrt(result / output.size() + get_regulization());
 }
 
-template <class LayerType>
-void LayerDeque<LayerType>::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
-                       const std::vector<std::vector<double>>& weights, unsigned int batch_size)
+void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+                       const std::vector<std::vector<double>>& weights, unsigned int batch_size, unsigned int minibatch_size)
 {
     if (input.size() != output.size())
         throw std::invalid_argument("input size is not equal to output size of training data"); // TODO: make an global Exception static class
 
     if (weights.size() != output.size())
         throw std::invalid_argument("event weights size is not equal to output size of training data"); // TODO: make an global Exception static class
-    // Reserve memory and define reset func
-    std::vector<Matrix> gradients_W;
-    std::vector<Vector> gradients_B;
-    gradients_W.reserve(m_layers.size() - 1);
-    gradients_B.reserve(m_layers.size() - 1);
 
-    auto reset_gradients = [this, &gradients_W, &gradients_B](){
-        gradients_W.clear();
-        gradients_B.clear();
-        for (unsigned int idl = 0; idl < m_layers.size() - 1; ++idl)
-        {
-           gradients_W.emplace_back( Matrix::Zero(m_layers.at(idl)->size(), m_layers.at(idl+1)->size()) );
-           gradients_B.emplace_back( Vector::Zero(m_layers.at(idl+1)->size()) );
-        }
+    auto set_trainMode = [this] (bool flag)
+    {
+        for (auto &layer: m_layers)
+            layer->m_trainMode = flag;
     };
 
-    reset_gradients();
+    set_trainMode(true);
 
-    // Calculate gradients
+    // Calculate gradients and update weights
     for (unsigned int idx = 0; idx < input.size(); ++idx)
     {
         if (m_layers.front()->size() != input.at(idx).size())
@@ -268,33 +255,41 @@ void LayerDeque<LayerType>::train(const std::vector<std::vector<double>>& input,
 
         if (m_layers.back()->size() != output.at(idx).size())
             throw std::invalid_argument("wrong output size"); // TODO: make an global Exception static class
-
-        std::vector<std::pair<Matrix, Vector>> gradient = get_gradient(input.at(idx), output.at(idx), weights.at(idx));
-
-        for (unsigned idl = 0; idl < m_layers.size() - 1; ++idl)
+  
+        // Calculate for one event a minibatch gradient 
+        for (unsigned int jdx = 0; jdx < minibatch_size; ++jdx)
         {
-            gradients_W.at(idl) += gradient.at(idl).first;
-            gradients_B.at(idl) += gradient.at(idl).second;
+            for (auto& layer: m_layers)
+                layer->update();
+
+            std::vector<std::pair<Matrix, Vector>> dL = get_gradient(input.at(idx), output.at(idx), weights.at(idx));
+
+            for (unsigned idl = 0; idl < m_layers.size() - 1; ++idl)
+            {
+                //Calculate summary layer gradient with likelihood and regulization
+                dL.at(idl).fisrt /= (minibatch_size * batch_size);
+                dL.at(idl).second /= (minibatch_size * batch_size);
+                m_layers.at(idl)->add_gradient(m_regulization_rate, dL.at(idl));
+            }
         }
 
         if ( (idx + 1) % batch_size == 0)
         {
             for (unsigned int idl = 0; idl < m_layers.size() - 1; ++idl)
             {
-                double weight_decay = 1. - m_step * m_regulization_rate / m_outsize;
-                m_layers.at(idl)->set_matrixW(weight_decay * m_layers.at(idl)->get_matrixW() - m_step * gradients_W.at(idl) / batch_size);
-                m_layers.at(idl)->set_vectorB(weight_decay * m_layers.at(idl)->get_vectorB() - m_step * gradients_B.at(idl) / batch_size);
+                m_layers.at(idl)->update_weights(m_step);
             }
+
+            // is it necessary? it should be moved upper
             if (input.size() - idx < batch_size) // nothing to batch
                 break;
-
-            reset_gradients();
         }
     }
+
+    set_trainMode(false);
 }
 
-template <class LayerType>
-std::vector<std::pair<Matrix, Vector>> LayerDeque<LayerType>::get_gradient(const std::vector<double>& input, const std::vector<double>& output,
+std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vector<double>& input, const std::vector<double>& output,
                                                                 const std::vector<double>& weights) const
 {
     std::vector<std::pair<Matrix, Vector>> dL;
@@ -342,21 +337,25 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque<LayerType>::get_gradient(const
         delta = m_layers.at(idx)->calculateXp( *pZ_layers.at(idx) ).array() * (delta * m_layers.at(idx)->get_matrixW().transpose()).array();
     }
 
+    //auto f = [](double el) {return std::isnan(el)? 0: el;};
+    //for (auto& p: dL)
+    //{
+    //    p.first = p.first.unaryExpr(f);
+    //    p.second = p.second.unaryExpr(f);
+    //}
+
     std::reverse( std::begin(dL), std::end(dL) );
     return dL;
 }
 
-template <class LayerType>
-double LayerDeque<LayerType>::get_L2_regulization() const
+double LayerDeque::get_regulization() const
 {
     if (m_regulization_rate == 0)
         return 0;
 
-    double regulization = 0;
+    double regulization = 0.;
     for (const auto& pLayer: m_layers)
-    {
-        regulization += (pLayer->get_matrixW().array() * pLayer->get_matrixW().array()).sum();
-        regulization += (pLayer->get_vectorB().array() * pLayer->get_vectorB().array()).sum();
-    }
-    return 0.5 * m_regulization_rate * regulization / m_outsize;
+        regulization += pLayer->get_regulization();
+    return m_regulization_rate * regulization / m_outsize;
 }
+

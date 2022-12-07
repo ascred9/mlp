@@ -13,4 +13,4 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 include_directories(include)
 
-add_library(mlp SHARED src/network.cpp src/layer.cpp src/layer_deque.cpp src/transformation.cpp)
+add_library(mlp SHARED src/network.cpp src/bnetwork.cpp src/layer.cpp src/blayer.cpp src/layer_deque.cpp src/transformation.cpp)
