@@ -1,0 +1,29 @@
+numb_input 5
+numb_output 1
+deep 3
+nepoch 94
+loss_func GOOGLE
+step 0.000108106
+topology 5 3 1 
+active_funcs linear th linear 
+input_transforms
+	linear 2 0 700
+	linear 2 0 700
+	linear 2 0 1.571
+	linear 2 0 6.284
+	linear 2 37 51
+output_transforms
+	linear 2 0 1
+regulization_rate 0
+layer 
+[   0.277409  0.0117975   0.907071
+  0.762661  -0.738295  -0.635095
+ -0.448638    0.39776   0.369457
+-0.0857576 -0.0409511  -0.372217
+ -0.020574   0.323447   0.778094 ]
+{ -0.769529  0.219071 -0.106289 }
+layer 
+[ -0.631215
+-0.641093
+ 0.251912 ]
+{ 0.449125 }
