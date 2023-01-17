@@ -137,15 +137,11 @@ void BayesianLayer::add_gradient(double reg, const std::pair<Matrix, Vector>& dL
 {
     Matrix gradW = dL.first + reg * get_matrixW();
     m_gradW += gradW;
-    m_gradDW.array() += m_epsilonW.array() * gradW.array(); 
+    m_gradDW.array() += m_epsilonW.array() * gradW.array();; 
 
     Vector gradB = dL.second + reg * get_vectorB();
     m_gradB += gradB;
     m_gradDB.array() += m_epsilonB.array() * gradB.array();
-
-    //auto positive = [](double a){return a > 0? a: 1e-5;};
-    //m_devMatrixW = m_devMatrixW.unaryExpr(positive);
-    //m_devVectorB = m_devVectorB.unaryExpr(positive);
 }
 
 
@@ -183,8 +179,12 @@ void BayesianLayer::update_weights(double step)
 {
     m_matrixW -= step * m_gradW;
     m_vectorB -= step * m_gradB;
-    m_devMatrixW -= step * m_gradDW;
-    m_devVectorB -= step * m_gradDB;
+    m_devMatrixW.array() -= step * (m_gradDW.array());// - 1e-6*m_devMatrixW.array().inverse());// + m_devMatrixW.array());
+    m_devVectorB.array() -= step * (m_gradDB.array());// - 1e-6*m_devVectorB.array().inverse());// + m_devVectorB.array());
+
+    auto positive = [](double a){return a > 0? a: -a;};
+    m_devMatrixW = m_devMatrixW.unaryExpr(positive);
+    m_devVectorB = m_devVectorB.unaryExpr(positive);
 
     m_gradW *= 0.;
     m_gradB *= 0.;

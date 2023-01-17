@@ -132,7 +132,7 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     m_loss_type = loss_type;
     if (m_loss_type == "LS")
     {
-        m_floss = [this](const Vector& real, const Vector& output){return 0.5 * ((output - real).array() * (output - real).array()) / m_outsize ;};
+        m_floss = [this](const Vector& real, const Vector& output){return 0.5 * (output - real).array().pow(2) / m_outsize ;};
         m_fploss = [this](const Vector& real, const Vector& output){return ((output-real).array()) / m_outsize;};
     }
     else if (m_loss_type == "LQ")
@@ -179,8 +179,8 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     }
     else if (m_loss_type == "GOOGLE")
     {
-        double a = -20.;
-        double c = 200.;
+        double a = -200.;
+        double c = 100.;
         auto f = [a, c](double x) {return abs(a-2.)/a * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2.) - 1.);};
         auto df = [a, c](double x) {return  x/(c*c) * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2. - 1) );};
         m_floss = [this, f](const Vector& real, const Vector& output) {return (output-real).unaryExpr(f) / m_outsize; };
