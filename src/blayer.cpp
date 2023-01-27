@@ -177,10 +177,11 @@ void BayesianLayer::update()
 
 void BayesianLayer::update_weights(double step)
 {
+    double sigma0 = .01;
     m_matrixW -= step * m_gradW;
     m_vectorB -= step * m_gradB;
-    m_devMatrixW.array() -= step * (m_gradDW.array() - m_devMatrixW.array().inverse() + m_devMatrixW.array());
-    m_devVectorB.array() -= step * (m_gradDB.array() - m_devVectorB.array().inverse() + m_devVectorB.array());
+    m_devMatrixW.array() -= step * (m_gradDW.array() - sigma0*m_devMatrixW.array().inverse() + m_devMatrixW.array());
+    m_devVectorB.array() -= step * (m_gradDB.array() - sigma0*m_devVectorB.array().inverse() + m_devVectorB.array());
 
     auto positive = [](double a){return a > 0? a: -a;};
     m_devMatrixW = m_devMatrixW.unaryExpr(positive);
