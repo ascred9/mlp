@@ -332,12 +332,13 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
     Vector delta = (W.array() * m_fploss(Y, *pX_layers.back()).array()) * m_layers.back()->calculateXp( *pZ_layers.back() ).array();
     for (int idx = m_layers.size()-2; idx > -1; --idx)
     {
-        dL.emplace_back( std::pair<Matrix, Vector>((*pX_layers.at(idx)).transpose() * delta, delta) );
+        dL.emplace_back( std::pair<Matrix, Vector>((*pX_layers.at(idx)).transpose() * delta, delta));
 
         if (idx == 0)
             break;
             
-        delta = m_layers.at(idx)->calculateXp( *pZ_layers.at(idx) ).array() * (delta * m_layers.at(idx)->get_matrixW().transpose()).array();
+        delta = m_layers.at(idx)->calculateXp( *pZ_layers.at(idx) ).array() *
+ 	    (delta * m_layers.at(idx)->get_matrixW().transpose()).array();
     }
 
     //auto f = [](double el) {return std::isnan(el)? 0: el;};
@@ -361,4 +362,3 @@ double LayerDeque::get_regulization() const
         regulization += pLayer->get_regulization();
     return m_regulization_rate * regulization / m_outsize;
 }
-

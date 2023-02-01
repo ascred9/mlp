@@ -34,10 +34,8 @@ protected:
     Matrix m_tempMatrixW;
     Vector m_tempVectorB;
 
-    Matrix m_gradW;
-    Vector m_gradB;
     Matrix m_gradDW;
-    Matrix m_gradDB;
+    Vector m_gradDB;
 
     std::mt19937 m_gen;
     std::normal_distribution<> m_gaus{0., 1.};
@@ -55,7 +53,6 @@ public:
     ~BayesianLayer();
     virtual void add_gradient(double reg, const std::pair<Matrix, Vector>& dL) override;
     virtual void generate_weights(const std::string& init_type) override;
-    virtual double get_regulization() override;
     virtual void print(std::ostream& os) const override;
     virtual bool read(std::istream& fin) override;
     virtual void reset_grads() override;

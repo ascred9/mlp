@@ -15,7 +15,7 @@ input_transforms
 	linear 2 37 51
 output_transforms
 	linear 2 0 1
-regulization_rate 0
+regulization_rate 1e-8
 layer 
 [ -0.0257509  -0.157163    0.32365  -0.155594  -0.299184   0.451085   0.631405
  -0.283349  -0.630898  -0.598514   0.203534   0.468832   0.561363  -0.647083

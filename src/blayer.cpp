@@ -125,30 +125,17 @@ void BayesianLayer::generate_weights(const std::string& init_type)
     m_devVectorB = 0.3 * m_vectorB.array().abs();
 }
 
-double BayesianLayer::get_regulization()
-{
-    double regulization = 0.;
-    regulization += get_matrixW().array().pow(2).sum();
-    regulization += get_vectorB().array().pow(2).sum();
-    return regulization;
-}
-
 void BayesianLayer::add_gradient(double reg, const std::pair<Matrix, Vector>& dL)
 {
-    Matrix gradW = dL.first + reg * get_matrixW();
-    m_gradW += gradW;
-    m_gradDW.array() += m_epsilonW.array() * gradW.array();; 
-
-    Vector gradB = dL.second + reg * get_vectorB();
-    m_gradB += gradB;
-    m_gradDB.array() += m_epsilonB.array() * gradB.array();
+    Layer::add_gradient(reg, dL);
+    m_gradDW.array() += m_epsilonW.array() * (dL.first + reg * get_matrixW()).array(); 
+    m_gradDB.array() += m_epsilonB.array() * (dL.second + reg * get_vectorB()).array();
 }
 
 
 void BayesianLayer::reset_grads()
 {
-    m_gradW = Matrix::Zero(m_size, m_out_size);
-    m_gradB = Vector::Zero(m_out_size);
+    Layer::reset_grads();
     m_gradDW = Matrix::Zero(m_size, m_out_size);
     m_gradDB = Vector::Zero(m_out_size);
 }
@@ -180,8 +167,8 @@ void BayesianLayer::update_weights(double step)
     double sigma0 = .01;
     m_matrixW -= step * m_gradW;
     m_vectorB -= step * m_gradB;
-    m_devMatrixW.array() -= step * (m_gradDW.array() - sigma0*m_devMatrixW.array().inverse() + m_devMatrixW.array());
-    m_devVectorB.array() -= step * (m_gradDB.array() - sigma0*m_devVectorB.array().inverse() + m_devVectorB.array());
+    m_devMatrixW.array() -= step * (m_gradDW.array());// - sigma0*m_devMatrixW.array().inverse() + m_devMatrixW.array());
+    m_devVectorB.array() -= step * (m_gradDB.array());// - sigma0*m_devVectorB.array().inverse() + m_devVectorB.array());
 
     auto positive = [](double a){return a > 0? a: -a;};
     m_devMatrixW = m_devMatrixW.unaryExpr(positive);
