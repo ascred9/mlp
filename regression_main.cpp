@@ -54,7 +54,7 @@ int process(TString filename)
     std::normal_distribution<> gaus(0., 10.0);
 
     clock_t start, end;
-    int Nepoch = 20; //1*94;
+    int Nepoch = 1*94;
     int Nentries = tph->GetEntries();
     int batch_size = 2;
     int minibatch_size = 10;
@@ -79,7 +79,7 @@ int process(TString filename)
     for (int i=0; i < Nentries * 0.8; i++)
     {
         tph->GetEntry(i);
-        if (phi > 7 || th > 4 || abs(th-M_PI/2)<0.55 || rho < 37) continue;
+        if (phi > 7 || th > 4 || abs(th-M_PI/2)>0.55 || rho < 37) continue;
 
         //while(true)
         //{
@@ -112,7 +112,7 @@ int process(TString filename)
     for (int i=0; i < Nentries * 0.8; i++)
     {
         tph->GetEntry(i);
-        if (phi > 7 || th > 4 || abs(th-M_PI/2)<0.55 || rho < 37) continue;
+        if (phi > 7 || th > 4 || abs(th-M_PI/2)>0.55 || rho < 37) continue;
       
         //while(true)
         //{
@@ -166,7 +166,7 @@ int process(TString filename)
     for (int i = Nentries * 0.8; i < Nentries; ++i)
     {
     	tph->GetEntry(i);
-        if (phi > 7 || th > 4 || abs(th-M_PI/2)<0.55 || rho < 37) continue;
+        if (phi > 7 || th > 4 || abs(th-M_PI/2)>0.55 || rho < 37) continue;
         double n_th = abs(th - M_PI/2);
 
         auto res = net_ptr->get_result({lxe, csi, bgo, n_th, phi, rho});

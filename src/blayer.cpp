@@ -125,11 +125,13 @@ void BayesianLayer::generate_weights(const std::string& init_type)
     m_devVectorB = 0.3 * m_vectorB.array().abs();
 }
 
+double v = 0.8;
+
 void BayesianLayer::add_gradient(double reg, const std::pair<Matrix, Vector>& dL)
 {
-    Layer::add_gradient(reg, dL);
-    m_gradDW.array() += m_epsilonW.array() * (dL.first + reg * get_matrixW()).array(); 
-    m_gradDB.array() += m_epsilonB.array() * (dL.second + reg * get_vectorB()).array();
+    Layer::add_gradient(reg, {(1-v)*dL.first, (1-v)*dL.second});
+    m_gradDW.array() += (1-v) * m_epsilonW.array() * (dL.first + reg * get_matrixW()).array(); 
+    m_gradDB.array() += (1-v) * m_epsilonB.array() * (dL.second + reg * get_vectorB()).array();
 }
 
 
@@ -174,8 +176,8 @@ void BayesianLayer::update_weights(double step)
     m_devMatrixW = m_devMatrixW.unaryExpr(positive);
     m_devVectorB = m_devVectorB.unaryExpr(positive);
 
-    m_gradW *= 0.;
-    m_gradB *= 0.;
-    m_gradDW *= 0.;
-    m_gradDB *= 0.;
+    m_gradW *= v;//0.;
+    m_gradB *= v;//0.;
+    m_gradDW *= v;//0.;
+    m_gradDB *= v;//0.;
 }
