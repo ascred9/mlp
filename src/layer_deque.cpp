@@ -22,8 +22,13 @@ void LayerDeque::add_layers<BayesianLayer>(std::vector<unsigned int> topology);
 LayerDeque::LayerDeque():
     m_outsize(0),
     m_step(0.5),
-    m_regulization_rate(0.)
+    m_adagrad_rate(0.),
+    m_regulization_rate(0.),
+    m_viscosity_rate(0.)
 {
+    m_pars_map["regulization"] = &m_regulization_rate;
+    m_pars_map["viscosity"] = &m_viscosity_rate;
+    m_pars_map["adagrad"] = &m_adagrad_rate;
 }
 
 LayerDeque::~LayerDeque()
@@ -93,7 +98,9 @@ double LayerDeque::get_step() const
 
 void LayerDeque::print(std::ostream& os) const
 {
+    os << "adagrad_rate " << m_adagrad_rate << std::endl;
     os << "regulization_rate " << m_regulization_rate << std::endl;
+    os << "viscosity_rate " << m_viscosity_rate << std::endl;
     for(const auto& pLayer: m_layers)
         pLayer->print(os);
 }
@@ -190,9 +197,19 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
         throw std::invalid_argument("this loss function isn't implemented");
 }
 
+void LayerDeque::set_adagrad_rate(double adagrad_rate)
+{
+    m_adagrad_rate = adagrad_rate;
+}
+
 void LayerDeque::set_regulization_rate(double regulization_rate)
 {
     m_regulization_rate = regulization_rate;
+}
+
+void LayerDeque::set_viscosity_rate(double viscosity_rate)
+{
+    m_viscosity_rate = viscosity_rate;
 }
 
 void LayerDeque::set_step(const double step)
@@ -244,7 +261,7 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
         for (auto &layer: m_layers)
         {
             layer->m_trainMode = flag;
-            layer->reset_grads();
+            layer->reset_layer(m_pars_map);
         }
     };
 
@@ -265,14 +282,14 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
             for (auto& layer: m_layers)
                 layer->update();
 
-            std::vector<std::pair<Matrix, Vector>> dL = get_gradient(input.at(idx), output.at(idx), weights.at(idx));
+            std::vector<std::pair<Matrix, Vector>> dL( std::move(get_gradient(input.at(idx), output.at(idx), weights.at(idx))) );
 
             for (unsigned idl = 0; idl < m_layers.size() - 1; ++idl)
             {
                 //Calculate summary layer gradient with likelihood and regulization
                 dL.at(idl).first /= (minibatch_size * batch_size);
                 dL.at(idl).second /= (minibatch_size * batch_size);
-                m_layers.at(idl)->add_gradient(m_regulization_rate, dL.at(idl));
+                m_layers.at(idl)->add_gradient(dL.at(idl));
             }
         }
 
@@ -341,6 +358,7 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
  	    (delta * m_layers.at(idx)->get_matrixW().transpose()).array();
     }
 
+    // Let's try to skip a gradient explosion
     //auto f = [](double el) {return std::isnan(el)? 0: el;};
     //for (auto& p: dL)
     //{

@@ -151,6 +151,20 @@ bool Network::init_from_file(const std::string& in_file_name, const std::string&
             m_layer_deque.set_regulization_rate(rate);
             continue;
         }
+        if (data == "viscosity_rate")
+        {
+            double rate;
+            fin >> rate;
+            m_layer_deque.set_viscosity_rate(rate);
+            continue;
+	}
+        if (data == "adagrad_rate")
+        {
+            double rate;
+            fin >> rate;
+            m_layer_deque.set_adagrad_rate(rate);
+            continue;
+	}
         if (data == "input_transforms" || data == "output_transforms")
         {
             unsigned int ntransforms = (data == "input_transforms")? m_numb_input: m_numb_output;

@@ -125,19 +125,17 @@ void BayesianLayer::generate_weights(const std::string& init_type)
     m_devVectorB = 0.3 * m_vectorB.array().abs();
 }
 
-double v = 0.8;
-
-void BayesianLayer::add_gradient(double reg, const std::pair<Matrix, Vector>& dL)
+void BayesianLayer::add_gradient(const std::pair<Matrix, Vector>& dL)
 {
-    Layer::add_gradient(reg, {(1-v)*dL.first, (1-v)*dL.second});
-    m_gradDW.array() += (1-v) * m_epsilonW.array() * (dL.first + reg * get_matrixW()).array(); 
-    m_gradDB.array() += (1-v) * m_epsilonB.array() * (dL.second + reg * get_vectorB()).array();
+    Layer::add_gradient(dL);
+    m_gradDW.array() += (1-m_viscosity_rate) * m_epsilonW.array() * (dL.first + m_regulization_rate * get_matrixW()).array(); 
+    m_gradDB.array() += (1-m_viscosity_rate) * m_epsilonB.array() * (dL.second + m_regulization_rate * get_vectorB()).array();
 }
 
 
-void BayesianLayer::reset_grads()
+void BayesianLayer::reset_layer(const std::map<std::string, double*>& learning_pars)
 {
-    Layer::reset_grads();
+    Layer::reset_layer(learning_pars);
     m_gradDW = Matrix::Zero(m_size, m_out_size);
     m_gradDB = Vector::Zero(m_out_size);
 }
@@ -166,18 +164,17 @@ void BayesianLayer::update()
 
 void BayesianLayer::update_weights(double step)
 {
-    double sigma0 = .01;
     m_matrixW -= step * m_gradW;
     m_vectorB -= step * m_gradB;
-    m_devMatrixW.array() -= step * (m_gradDW.array());// - sigma0*m_devMatrixW.array().inverse() + m_devMatrixW.array());
-    m_devVectorB.array() -= step * (m_gradDB.array());// - sigma0*m_devVectorB.array().inverse() + m_devVectorB.array());
+    m_devMatrixW.array() -= step * (m_gradDW.array());// - m_devMatrixW.array().inverse() + m_devMatrixW.array());
+    m_devVectorB.array() -= step * (m_gradDB.array());// - m_devVectorB.array().inverse() + m_devVectorB.array());
 
     auto positive = [](double a){return a > 0? a: -a;};
     m_devMatrixW = m_devMatrixW.unaryExpr(positive);
     m_devVectorB = m_devVectorB.unaryExpr(positive);
 
-    m_gradW *= v;//0.;
-    m_gradB *= v;//0.;
-    m_gradDW *= v;//0.;
-    m_gradDB *= v;//0.;
+    m_gradW *= m_viscosity_rate;
+    m_gradB *= m_viscosity_rate;
+    m_gradDW *= m_viscosity_rate;
+    m_gradDB *= m_viscosity_rate;
 }

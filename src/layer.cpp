@@ -17,7 +17,10 @@ Layer::Layer(unsigned int size):
     m_size(size),
     m_in_size(0),
     m_out_size(0),
-    m_bias(1)
+    m_bias(1),
+    m_regulization_rate(0.),
+    m_viscosity_rate(0.),
+    m_adagrad_rate(0.)
 {
 }
 
@@ -197,10 +200,10 @@ double Layer::get_regulization()
     return regulization;
 }
 
-void Layer::add_gradient(double reg, const std::pair<Matrix, Vector>& dL)
+void Layer::add_gradient(const std::pair<Matrix, Vector>& dL)
 {
-    m_gradW += dL.first + reg * get_matrixW();
-    m_gradB += dL.second + reg * get_vectorB();
+    m_gradW += (1-m_viscosity_rate) * (dL.first + m_regulization_rate * get_matrixW());
+    m_gradB += (1-m_viscosity_rate) * (dL.second + m_regulization_rate * get_vectorB());
 }
 
 void Layer::print(std::ostream &os) const
@@ -250,10 +253,18 @@ bool Layer::read(std::istream& fin)
     return true;
 }
 
-void Layer::reset_grads()
+void Layer::reset_layer(const std::map<std::string, double*>& learning_pars)
 {
     m_gradW = Matrix::Zero(m_size, m_out_size);
     m_gradB = Vector::Zero(m_out_size);
+
+    m_regulization_rate = *learning_pars.at("regulization");
+    m_viscosity_rate = *learning_pars.at("viscosity");
+    m_adagrad_rate = *learning_pars.at("adagrad");
+}
+
+void Layer::update()
+{
 }
 
 void Layer::update_weights(double step)
@@ -261,6 +272,6 @@ void Layer::update_weights(double step)
     m_matrixW -= step * m_gradW;
     m_vectorB -= step * m_gradB;
 
-    m_gradW *= 0.;
-    m_gradB *= 0.;
+    m_gradW *= m_viscosity_rate;
+    m_gradB *= m_viscosity_rate;
 }
