@@ -36,6 +36,8 @@ protected:
 
     Matrix m_gradDW;
     Vector m_gradDB;
+    Matrix m_memoryDW;
+    Vector m_memoryDB;
 
     std::mt19937 m_gen;
     std::normal_distribution<> m_gaus{0., 1.};

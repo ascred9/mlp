@@ -40,6 +40,8 @@ protected:
     Vector m_vectorB;
     Matrix m_gradW;
     Vector m_gradB;
+    Matrix m_memoryW;
+    Vector m_memoryB;
     const double m_bias;
 
     // Learning parameters

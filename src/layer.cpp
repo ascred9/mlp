@@ -258,6 +258,9 @@ void Layer::reset_layer(const std::map<std::string, double*>& learning_pars)
     m_gradW = Matrix::Zero(m_size, m_out_size);
     m_gradB = Vector::Zero(m_out_size);
 
+    m_memoryW = Matrix::Zero(m_size, m_out_size);
+    m_memoryB = Vector::Zero(m_out_size);
+
     m_regulization_rate = *learning_pars.at("regulization");
     m_viscosity_rate = *learning_pars.at("viscosity");
     m_adagrad_rate = *learning_pars.at("adagrad");
@@ -269,9 +272,19 @@ void Layer::update()
 
 void Layer::update_weights(double step)
 {
-    m_matrixW -= step * m_gradW;
-    m_vectorB -= step * m_gradB;
+    m_memoryW.array() += (1.-m_adagrad_rate) * m_gradW.array().pow(2);
+    m_memoryB.array() += (1.-m_adagrad_rate) * m_gradB.array().pow(2);
+
+    m_matrixW.array() -= step * m_gradW.array() /
+      (m_memoryW.array().pow(2) +
+        Matrix::Ones(m_size, m_out_size).array()).sqrt();
+    m_vectorB.array() -= step * m_gradB.array() /
+      (m_memoryB.array().pow(2) +
+        Vector::Ones(1, m_out_size).array()).sqrt();
 
     m_gradW *= m_viscosity_rate;
     m_gradB *= m_viscosity_rate;
+
+    m_memoryW *= m_adagrad_rate;
+    m_memoryB *= m_adagrad_rate;
 }

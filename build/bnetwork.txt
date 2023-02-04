@@ -15,6 +15,7 @@ input_transforms
 	linear 2 37 51
 output_transforms
 	linear 2 0 1
+adagrad_rate 0.9
 regulization_rate 1e-8
 viscosity_rate 0.9
 layer 

@@ -138,6 +138,9 @@ void BayesianLayer::reset_layer(const std::map<std::string, double*>& learning_p
     Layer::reset_layer(learning_pars);
     m_gradDW = Matrix::Zero(m_size, m_out_size);
     m_gradDB = Vector::Zero(m_out_size);
+
+    m_memoryDW = Matrix::Zero(m_size, m_out_size);
+    m_memoryDB = Vector::Zero(m_out_size);
 }
 
 void BayesianLayer::update()
@@ -164,10 +167,24 @@ void BayesianLayer::update()
 
 void BayesianLayer::update_weights(double step)
 {
-    m_matrixW -= step * m_gradW;
-    m_vectorB -= step * m_gradB;
-    m_devMatrixW.array() -= step * (m_gradDW.array());// - m_devMatrixW.array().inverse() + m_devMatrixW.array());
-    m_devVectorB.array() -= step * (m_gradDB.array());// - m_devVectorB.array().inverse() + m_devVectorB.array());
+    m_memoryW.array() += (1.-m_adagrad_rate) * m_gradW.array().pow(2);
+    m_memoryB.array() += (1.-m_adagrad_rate) * m_gradB.array().pow(2);
+    m_memoryDW.array() +=(1.-m_adagrad_rate) *m_gradDW.array().pow(2);
+    m_memoryDB.array() +=(1.-m_adagrad_rate) *m_gradDB.array().pow(2);
+
+    m_matrixW.array() -= step * m_gradW.array() /
+      (m_memoryW.array().pow(2) +
+        Matrix::Ones(m_size, m_out_size).array()).sqrt();
+    m_vectorB.array() -= step * m_gradB.array() /
+      (m_memoryB.array().pow(2) +
+        Vector::Ones(1, m_out_size).array()).sqrt();
+
+    m_devMatrixW.array() -= step * (m_gradDW.array()) /
+      (m_memoryDW.array().pow(2) +
+        Matrix::Ones(m_size, m_out_size).array()).sqrt();
+    m_devVectorB.array() -= step * (m_gradDB.array()) /
+      (m_memoryDB.array().pow(2) +
+        Vector::Ones(1, m_out_size).array()).sqrt();
 
     auto positive = [](double a){return a > 0? a: -a;};
     m_devMatrixW = m_devMatrixW.unaryExpr(positive);
@@ -177,4 +194,9 @@ void BayesianLayer::update_weights(double step)
     m_gradB *= m_viscosity_rate;
     m_gradDW *= m_viscosity_rate;
     m_gradDB *= m_viscosity_rate;
+
+    m_memoryW *= m_adagrad_rate;
+    m_memoryB *= m_adagrad_rate;
+    m_memoryDW *= m_adagrad_rate;
+    m_memoryDB *= m_adagrad_rate;
 }
