@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 #include <memory>
 #include <numeric>
 #include <vector>
@@ -67,9 +68,9 @@ public:
     double test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                 const std::vector<std::vector<double>>& weights) const;
     double test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const;
-    void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+    void train(const int nepoch, const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                const std::vector<std::vector<double>>& weights, unsigned int batch_size = 1, unsigned int minibatch_size = 1, double split_mode = 0.5); // split mode is in [0, 1]
-    void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 1, unsigned int minibatch_size = 1, double split_mode = 0.5); // split mode is in [0, 1]
+    void train(const int nepoch, const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 1, unsigned int minibatch_size = 1, double split_mode = 0.5); // split mode is in [0, 1]
 };
 
 using NetworkPtr = std::unique_ptr<Network>;

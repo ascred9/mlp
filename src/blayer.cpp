@@ -128,19 +128,26 @@ void BayesianLayer::generate_weights(const std::string& init_type)
 void BayesianLayer::add_gradient(const std::pair<Matrix, Vector>& dL)
 {
     Layer::add_gradient(dL);
-    m_gradDW.array() += (1-m_viscosity_rate) * m_epsilonW.array() * (dL.first + m_regulization_rate * get_matrixW()).array(); 
-    m_gradDB.array() += (1-m_viscosity_rate) * m_epsilonB.array() * (dL.second + m_regulization_rate * get_vectorB()).array();
+    m_gradDW.array() += m_epsilonW.array() * (dL.first + m_regulization_rate * get_matrixW()).array(); 
+    m_gradDB.array() += m_epsilonB.array() * (dL.second + m_regulization_rate * get_vectorB()).array();
 }
 
 
 void BayesianLayer::reset_layer(const std::map<std::string, double*>& learning_pars)
 {
     Layer::reset_layer(learning_pars);
-    m_gradDW = Matrix::Zero(m_size, m_out_size);
-    m_gradDB = Vector::Zero(m_out_size);
 
-    m_memoryDW = Matrix::Zero(m_size, m_out_size);
-    m_memoryDB = Vector::Zero(m_out_size);
+    if (m_gradDW.size() == 0)
+    {
+        m_gradDW = Matrix::Zero(m_size, m_out_size);
+        m_gradDB = Vector::Zero(m_out_size);
+
+        m_speedDW = Matrix::Zero(m_size, m_out_size);
+        m_speedDB = Vector::Zero(m_out_size);
+
+        m_memoryDW = Matrix::Zero(m_size, m_out_size);
+        m_memoryDB = Vector::Zero(m_out_size);
+    }
 }
 
 void BayesianLayer::update()
@@ -167,36 +174,68 @@ void BayesianLayer::update()
 
 void BayesianLayer::update_weights(double step)
 {
-    m_memoryW.array() += (1.-m_adagrad_rate) * m_gradW.array().pow(2);
-    m_memoryB.array() += (1.-m_adagrad_rate) * m_gradB.array().pow(2);
-    m_memoryDW.array() +=(1.-m_adagrad_rate) *m_gradDW.array().pow(2);
-    m_memoryDB.array() +=(1.-m_adagrad_rate) *m_gradDB.array().pow(2);
+    double ep = 1e-8;
 
-    m_matrixW.array() -= step * m_gradW.array() /
-      (m_memoryW.array().pow(2) +
-        Matrix::Ones(m_size, m_out_size).array()).sqrt();
-    m_vectorB.array() -= step * m_gradB.array() /
-      (m_memoryB.array().pow(2) +
-        Vector::Ones(1, m_out_size).array()).sqrt();
+    // Update speed
+    double speed_boost = 1.;
+    if (m_n_iteration < 1./(1-m_viscosity_rate))
+        speed_boost = 1./(1-m_viscosity_rate);
 
+    m_speedW  += speed_boost * (1-m_viscosity_rate) * m_gradW;
+    m_speedB  += speed_boost * (1-m_viscosity_rate) * m_gradB;
+    m_speedDW += speed_boost * (1-m_viscosity_rate) * m_gradDW;
+    m_speedDB += speed_boost * (1-m_viscosity_rate) * m_gradDB;
+
+    // Update memory
+    double memory_boost = 1.;
+    if (m_n_iteration < 1./(1-m_adagrad_rate))
+        memory_boost = 1./(1-m_adagrad_rate);
+
+    m_memoryW.array()  += memory_boost * (1-m_adagrad_rate) * m_gradW.array().pow(2);
+    m_memoryB.array()  += memory_boost * (1-m_adagrad_rate) * m_gradB.array().pow(2);
+    m_memoryDW.array() += memory_boost * (1-m_adagrad_rate) * m_gradDW.array().pow(2);
+    m_memoryDB.array() += memory_boost * (1-m_adagrad_rate) * m_gradDB.array().pow(2);
+
+    // Update weight matrix
+    m_matrixW.array() -= step * m_speedW.array() /
+      (m_memoryW.array() +
+        Matrix::Constant(m_size, m_out_size, ep).array()).sqrt();
+    m_vectorB.array() -= step * m_speedB.array() /
+      (m_memoryB.array() +
+        Vector::Constant(1, m_out_size, ep).array()).sqrt();
+
+    // Update sigma weight matrix
     m_devMatrixW.array() -= step * (m_gradDW.array()) /
-      (m_memoryDW.array().pow(2) +
-        Matrix::Ones(m_size, m_out_size).array()).sqrt();
+      (m_memoryDW.array() +
+        Matrix::Constant(m_size, m_out_size, ep).array()).sqrt();
     m_devVectorB.array() -= step * (m_gradDB.array()) /
-      (m_memoryDB.array().pow(2) +
-        Vector::Ones(1, m_out_size).array()).sqrt();
+      (m_memoryDB.array() +
+        Vector::Constant(1, m_out_size, ep).array()).sqrt();
 
     auto positive = [](double a){return a > 0? a: -a;};
     m_devMatrixW = m_devMatrixW.unaryExpr(positive);
     m_devVectorB = m_devVectorB.unaryExpr(positive);
 
-    m_gradW *= m_viscosity_rate;
-    m_gradB *= m_viscosity_rate;
-    m_gradDW *= m_viscosity_rate;
-    m_gradDB *= m_viscosity_rate;
+    // Decrease speed for the next iteration
+    m_speedW *= m_viscosity_rate;
+    m_speedB *= m_viscosity_rate;
+    m_speedDW *= m_viscosity_rate;
+    m_speedDB *= m_viscosity_rate;
 
-    m_memoryW *= m_adagrad_rate;
-    m_memoryB *= m_adagrad_rate;
-    m_memoryDW *= m_adagrad_rate;
-    m_memoryDB *= m_adagrad_rate;
+    // Decrease memory fot the next iteration
+    if (m_adagrad_rate > 1e-4)
+    {
+        m_memoryW  *= m_adagrad_rate;
+        m_memoryB  *= m_adagrad_rate;
+        m_memoryDW *= m_adagrad_rate;
+        m_memoryDB *= m_adagrad_rate;
+    }
+
+    // Reset accumulated gradient
+    m_gradW  *= 0;
+    m_gradB  *= 0;
+    m_gradDW *= 0;
+    m_gradDB *= 0;
+
+    m_n_iteration++;
 }

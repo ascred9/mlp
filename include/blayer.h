@@ -15,7 +15,6 @@
 
 #include "eigen-3.4.0/Eigen/Core"
 
-#include <iostream>
 #include "layer.h"
 
 typedef Eigen::Matrix<double, 1, Eigen::Dynamic> Vector;
@@ -36,6 +35,8 @@ protected:
 
     Matrix m_gradDW;
     Vector m_gradDB;
+    Matrix m_speedDW;
+    Vector m_speedDB;
     Matrix m_memoryDW;
     Vector m_memoryDB;
 

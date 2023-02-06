@@ -14,6 +14,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <iostream>
 
 #include "eigen-3.4.0/Eigen/Core"
 
@@ -31,6 +32,9 @@ protected:
     unsigned int m_out_size;
     bool m_trainMode = false;
 
+    // Learning status
+    int m_n_iteration = 0;
+
     // Activization function
     std::function<double(double)> m_f;
     std::function<double(double)> m_fp;
@@ -40,6 +44,8 @@ protected:
     Vector m_vectorB;
     Matrix m_gradW;
     Vector m_gradB;
+    Matrix m_speedW;
+    Vector m_speedB;
     Matrix m_memoryW;
     Vector m_memoryB;
     const double m_bias;

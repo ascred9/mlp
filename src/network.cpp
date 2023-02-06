@@ -357,7 +357,7 @@ double Network::test(const std::vector<std::vector<double>>& input, const std::v
     return test(input, output, weights);
 }
 
-void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+void Network::train(const int nepoch, const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                     const std::vector<std::vector<double>>& weights, unsigned int batch_size, unsigned int minibatch_size, double split_mode)
 {
     const unsigned int input_size = input.size();
@@ -413,37 +413,44 @@ void Network::train(const std::vector<std::vector<double>>& input, const std::ve
     std::vector<std::vector<double>> test_output(transf_output.begin() + int(split_mode * output_size), transf_output.end());
     std::vector<std::vector<double>> test_weights(weights.begin() + int(split_mode * input_size), weights.end());
 
-    double epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
-    m_layer_deque.train(train_input, train_output, train_weights, batch_size, minibatch_size);
-    double epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
+    clock_t start, end;
+    for (int iep = 0; iep < nepoch; ++iep)
+    {
+        start = clock();
+        double epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
+        m_layer_deque.train(train_input, train_output, train_weights, batch_size, minibatch_size);
+        double epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
 
-    double reduce = std::abs(epsilon_after / epsilon_before);
+        double reduce = std::abs(epsilon_after / epsilon_before);
 
-    /*// Fading descent
-    double fading = std::exp(-reduce); // dependence on the previous result
-    m_layer_deque.set_step(m_layer_deque.get_step() * reduce);
-    */
+        /*// Fading descent
+        double fading = std::exp(-reduce); // dependence on the previous result
+        m_layer_deque.set_step(m_layer_deque.get_step() * reduce);
+        */
 
-    // Stochastic descent
-    double period = 30.;
-    double amp = .5;
-    double step = amp * 0.5 * (1. + cos(std::abs(m_nepoch / period - int(m_nepoch / period / M_PI) * M_PI )));
-    step = step == 0? amp: step;
-    m_layer_deque.set_step(step);
+        // Stochastic descent
+        double period = 30.;
+        double amp = .5;
+        double step = amp * 0.5 * (1. + cos(std::abs(m_nepoch / period - int(m_nepoch / period / M_PI) * M_PI )));
+        step = step == 0? amp: step;
+        m_layer_deque.set_step(step);
 
-    std::cout << "Nepoch: " << m_nepoch << " step: " << step << std::endl;
-    std::cout << epsilon_before << " -> " << epsilon_after << " : " << reduce << std::endl;
+        std::cout << "Nepoch: " << m_nepoch << " step: " << step << std::endl;
+        std::cout << epsilon_before << " -> " << epsilon_after << " : " << reduce << std::endl;
 
-    ++m_nepoch;
+        ++m_nepoch;
+        end = clock();
+        std::cout << "Training Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
+    }
 }
 
-void Network::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+void Network::train(const int nepoch, const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                     unsigned int batch_size, unsigned int minibatch_size, double split_mode)
 {
     std::vector<double> one_vec(m_numb_output, 1);
     std::vector<std::vector<double>> weights(output.size(), one_vec);
 
-    train(input, output, weights, batch_size, minibatch_size, split_mode);
+    train(nepoch, input, output, weights, batch_size, minibatch_size, split_mode);
 }
 
 void Network::transform_input(std::vector<double>& in_value) const
