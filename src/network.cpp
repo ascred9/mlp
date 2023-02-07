@@ -346,7 +346,7 @@ double Network::test(const std::vector<std::vector<double>>& input, const std::v
     if (weights_size != output_size)
         throw Exception("size of event weights and output are not equal");
     
-    return m_layer_deque.test(input, output, weights);
+    return m_layer_deque.test(input, output, weights).first;
 }
 
 double Network::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const
@@ -417,11 +417,12 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
     for (int iep = 0; iep < nepoch; ++iep)
     {
         start = clock();
-        double epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
+	std::pair<double, double> epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
         m_layer_deque.train(train_input, train_output, train_weights, batch_size, minibatch_size);
-        double epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
+	std::pair<double, double> epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
 
-        double reduce = std::abs(epsilon_after / epsilon_before);
+        double reduce = std::abs(epsilon_after.first / epsilon_before.first);
+        double dreduce = std::abs(epsilon_after.second / epsilon_before.second);
 
         /*// Fading descent
         double fading = std::exp(-reduce); // dependence on the previous result
@@ -436,7 +437,8 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
         m_layer_deque.set_step(step);
 
         std::cout << "Nepoch: " << m_nepoch << " step: " << step << std::endl;
-        std::cout << epsilon_before << " -> " << epsilon_after << " : " << reduce << std::endl;
+        std::cout << "Mean: " << epsilon_before.first << " -> " << epsilon_after.first << " : " << reduce << std::endl;
+        std::cout << "Stddev: " << epsilon_before.second << " -> " << epsilon_after.second << " : " << dreduce << std::endl;
 
         ++m_nepoch;
         end = clock();

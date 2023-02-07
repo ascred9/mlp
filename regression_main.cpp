@@ -55,9 +55,9 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 10.0);
 
-    int Nepoch = 1*94;
+    int Nepoch = 3*94;
     int Nentries = tph->GetEntries();
-    int batch_size = 2;
+    int batch_size = 1;
     int minibatch_size = 5;
     double T = 25.;
     std::vector<std::vector<double>> in, out, weights;
@@ -74,7 +74,7 @@ int process(TString filename)
     for (int i=0; i < Nentries * 0.8; i++)
     {
         tph->GetEntry(i);
-        if (phi > 7 || th > 4 || rho < 37) continue; //abs(th-M_PI/2)<0.55) continue;
+        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.55) continue;
 
         double n_th = abs(th - M_PI/2);
         in.push_back({lxe, csi, bgo, n_th, phi, rho});
@@ -91,7 +91,7 @@ int process(TString filename)
     for (int i=0; i < Nentries * 0.8; i++)
     {
         tph->GetEntry(i);
-        if (phi > 7 || th > 4 || rho < 37) continue; //abs(th-M_PI/2)<0.55) continue;
+        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.55) continue;
       
         double n_th = abs(th - M_PI/2);
         double weight = 1.; //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
@@ -124,7 +124,7 @@ int process(TString filename)
     for (int i = Nentries * 0.8; i < Nentries; ++i)
     {
     	tph->GetEntry(i);
-        if (phi > 7 || th > 4 || rho < 37) continue; //abs(th-M_PI/2)<0.55) continue;
+        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.55) continue;
         double n_th = abs(th - M_PI/2);
 
         auto res = net_ptr->get_result({lxe, csi, bgo, n_th, phi, rho});

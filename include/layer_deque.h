@@ -43,6 +43,9 @@ private:
     double m_viscosity_rate;
     std::map<std::string, double*> m_pars_map; // collect all rate to ine container
 
+    double m_alpha = 0.5; // = 2/(1+N), N = 3 last;
+    mutable Vector m_ema;
+
     std::vector<std::pair<Matrix, Vector>> get_gradient(const std::vector<double>& input, const std::vector<double>& output,
                                                         const std::vector<double>& weights) const;
     std::vector<std::pair<Matrix, Vector>> get_gradient_reg(const std::vector<double>& weights) const;
@@ -69,7 +72,7 @@ public:
     void set_regulization_rate(double regulization_rate);
     void set_viscosity_rate(double viscosity_rate);
     void set_step(const double step);
-    double test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+    std::pair<double, double> test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                 const std::vector<std::vector<double>>& weights) const;
     void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                const std::vector<std::vector<double>>& weights, unsigned int batch_size = 1, unsigned int minibatch_size = 1);

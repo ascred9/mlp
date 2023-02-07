@@ -62,6 +62,7 @@ LayerDeque::add_layers(std::vector<unsigned int> topology)
             iter->get()->set_func("sigmoid");
     }
     m_outsize = m_layers.back()->size();
+    m_ema = Vector::Zero(m_outsize);
 }
 
 std::vector<double> LayerDeque::calculate(const std::vector<double>& input) const
@@ -217,7 +218,7 @@ void LayerDeque::set_step(const double step)
     m_step = step;
 }
 
-double LayerDeque::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+std::pair<double, double> LayerDeque::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                         const std::vector<std::vector<double>>& weights) const
 {
     if (input.size() != output.size())
@@ -226,8 +227,7 @@ double LayerDeque::test(const std::vector<std::vector<double>>& input, const std
     if (weights.size() != output.size())
         throw std::invalid_argument("event weights size is not equal to output size of testing data"); // TODO: make an global Exception static class
 
-    double result = 0.;
-
+    double mean = 0.;
     for (unsigned int idx = 0; idx < input.size(); ++idx)
     {
         std::vector<double> calc = calculate(input.at(idx));
@@ -240,11 +240,28 @@ double LayerDeque::test(const std::vector<std::vector<double>>& input, const std
         int weights_size = output.at(idx).size();
         const Vector W = Eigen::Map<const Vector, Eigen::Aligned>(weights.at(idx).data(), weights_size);
 
-        result += (W.array() * m_floss(Yreal, Ycalc).array()).sum();
-
+        mean += (W.array() * m_floss(Yreal, Ycalc).array()).sum();
     }
+    mean /= output.size();
 
-    return sqrt(result / output.size() + get_regulization());
+    double stddev = 0.;
+    for (unsigned int idx = 0; idx < input.size(); ++idx)
+    {
+        std::vector<double> calc = calculate(input.at(idx));
+        int calc_size = calc.size();
+        const Vector Ycalc = Eigen::Map<const Vector, Eigen::Aligned>(calc.data(), calc_size);
+        
+        int out_size = output.at(idx).size();
+        const Vector Yreal = Eigen::Map<const Vector, Eigen::Aligned>(output.at(idx).data(), out_size);
+
+        int weights_size = output.at(idx).size();
+        const Vector W = Eigen::Map<const Vector, Eigen::Aligned>(weights.at(idx).data(), weights_size);
+
+        stddev += pow((W.array() * m_floss(Yreal, Ycalc).array()).sum() - mean, 2);
+    }
+    stddev = output.size() > 1? stddev / (output.size() - 1): 0;
+
+    return {sqrt(mean + get_regulization()), sqrt(stddev)};
 }
 
 void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
@@ -346,7 +363,13 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
         }
     }
 
-    Vector delta = (W.array() * m_fploss(Y, *pX_layers.back()).array()) * m_layers.back()->calculateXp( *pZ_layers.back() ).array();
+    Vector delta = (W.array() * m_fploss(Y, *pX_layers.back()).array()) *
+      (1 + m_alpha*(1-m_alpha) * (m_floss(Y, *pX_layers.back()) - m_ema).array())
+        * m_layers.back()->calculateXp( *pZ_layers.back() ).array();
+
+    m_ema *= 1. - m_alpha;
+    m_ema += m_alpha * m_floss(Y, *pX_layers.back());
+
     for (int idx = m_layers.size()-2; idx > -1; --idx)
     {
         dL.emplace_back( std::pair<Matrix, Vector>((*pX_layers.at(idx)).transpose() * delta, delta));
