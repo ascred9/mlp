@@ -497,7 +497,6 @@ void Network::pop(std::pair<double, double> epsilon) const
     if (!m_spec_popfunc)
         return;
 
-    // TODO: why root doesn't see any library?
     std::map<std::string, std::any> notebook;
 
     std::stringstream ss;
