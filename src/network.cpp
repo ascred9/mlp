@@ -414,12 +414,22 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
     std::vector<std::vector<double>> test_weights(weights.begin() + int(split_mode * input_size), weights.end());
 
     clock_t start, end;
+    // Testing to fix initial state
+    std::pair<double, double> epsilon = m_layer_deque.test(test_input, test_output, test_weights);
+    pop(epsilon);
     for (int iep = 0; iep < nepoch; ++iep)
     {
         start = clock();
-	std::pair<double, double> epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
+
+        // Testing before
+    	std::pair<double, double> epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
+
+        // Training
         m_layer_deque.train(train_input, train_output, train_weights, batch_size, minibatch_size);
-	std::pair<double, double> epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
+
+        // Testing after
+	    std::pair<double, double> epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
+        pop(epsilon_after);
 
         double reduce = std::abs(epsilon_after.first / epsilon_before.first);
         double dreduce = std::abs(epsilon_after.second / epsilon_before.second);
@@ -480,6 +490,25 @@ void Network::reverse_transform_output(std::vector<double>& out_value) const
 
     for (unsigned int idx = 0; idx < out_value.size(); ++idx)
         out_value.at(idx) = m_out_transf.at(idx)->reverse_transform(out_value.at(idx));
+}
+
+void Network::pop(std::pair<double, double> epsilon) const
+{
+    std::map<std::string, std::any> notebook;
+
+    std::stringstream ss;
+    print(ss);
+    notebook["struct"] = ss.str();
+    notebook["nepoch"] = m_nepoch;
+    notebook["mean_loss"] = epsilon.first;
+    notebook["dev_loss"] = epsilon.second;
+    notebook["step"] = m_layer_deque.get_step();
+    notebook["regulization_rate"] = m_layer_deque.get_regulization_rate();
+    notebook["viscosity_rate"] = m_layer_deque.get_viscosity_rate();
+    notebook["adagrad_rate"] = m_layer_deque.get_adagrad_rate();
+    
+    if (m_spec_popfunc)
+        m_spec_popfunc(notebook);
 }
 
 // TODO: Make an event weighting (+weight normalization), assembly of networks, also and randomazing of data order.

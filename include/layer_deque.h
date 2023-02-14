@@ -62,7 +62,10 @@ public:
     std::vector<double> calculate(const std::vector<double>& input) const;
     void clear();
     void generate_weights(const std::string& init_type);
-    double get_step() const;
+    double get_step() const {return m_step;};
+    double get_regulization_rate() const {return m_regulization_rate;};
+    double get_viscosity_rate() const {return m_viscosity_rate;};
+    double get_adagrad_rate() const {return m_adagrad_rate;};
     void print(std::ostream& os) const;
     bool read_layer(std::istream& fin, int layer_id);
     void set_active_funcs(const std::vector<std::string>& active_funcs);

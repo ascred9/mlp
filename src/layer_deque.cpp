@@ -92,11 +92,6 @@ void LayerDeque::generate_weights(const std::string& init_type)
     }
 }
 
-double LayerDeque::get_step() const
-{
-    return m_step;
-}
-
 void LayerDeque::print(std::ostream& os) const
 {
     os << "adagrad_rate " << m_adagrad_rate << std::endl;

@@ -12,6 +12,7 @@
 #pragma once
 
 #include <algorithm>
+#include <any>
 #include <stdexcept>
 #include <fstream>
 #include <iostream>
@@ -50,6 +51,11 @@ protected:
     void transform_output(std::vector<double>& out_value) const; // transform output from initial range to range [-1, +1]
     void reverse_transform_output(std::vector<double>& out_value) const; // reverse transform output from [-1, +1] to initial range
 
+    // To save network in training steps
+    std::function<void(std::map<std::string, std::any>)> m_spec_popfunc;
+    std::function<void()> m_spec_upgrade;
+    void pop(std::pair<double, double> epsilon) const;
+
 public:
     Network();
     ~Network();
@@ -71,6 +77,9 @@ public:
     void train(const int nepoch, const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                const std::vector<std::vector<double>>& weights, unsigned int batch_size = 1, unsigned int minibatch_size = 1, double split_mode = 0.5); // split mode is in [0, 1]
     void train(const int nepoch, const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 1, unsigned int minibatch_size = 1, double split_mode = 0.5); // split mode is in [0, 1]
+
+    void set_spectator_popfunc(std::function<void(std::map<std::string, std::any>)>); // Specify implemetation for your containers
+    void set_spectator_upfunc(std::function<void()>); // Specify implementation for your containers
 };
 
 using NetworkPtr = std::unique_ptr<Network>;

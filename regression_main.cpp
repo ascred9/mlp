@@ -53,7 +53,7 @@ int process(TString filename)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(-1.0, 1.0);
-    std::normal_distribution<> gaus(0., 10.0);
+    std::normal_distribution<> gaus(0., 100.0);
 
     int Nepoch = 3*94;
     int Nentries = tph->GetEntries();
@@ -78,7 +78,8 @@ int process(TString filename)
 
         double n_th = abs(th - M_PI/2);
         in.push_back({lxe, csi, bgo, n_th, phi, rho});
-        out.push_back({(csi+lxe+bgo)/simen});
+        //out.push_back({(csi+lxe+bgo)/(simen)});
+        out.push_back({(simen)});
 
         //double alpha = 0.814751 + 0.0502268 * 1. / (1. + std::exp((rho - 42.83) / 1.622));
         //double weight = std::exp(-abs(lxe + csi - alpha * simen) / T);
