@@ -1,4 +1,6 @@
+#include <any>
 #include <iostream>
+#include <map>
 #include <vector>
 #include <random>
 #include <iomanip>
@@ -99,12 +101,42 @@ int process(TString filename)
         weights.push_back({weight});
     }
 
+    TFile* outfile = new TFile("out.root", "recreate");
+    TTree* t = new TTree("tph", "tph");
+
+    // Think about to shrink it
+    TTree* tnet = new TTree("tnet", "tnet");
+    std::string structura;
+    int nepoch;
+    float mean_loss, dev_loss, step, reg, visc, ada;
+    tnet->Branch("struct", &structura);
+    tnet->Branch("nepoch", &nepoch);
+    tnet->Branch("mean_loss", &mean_loss);
+    tnet->Branch("dev_loss", &dev_loss);
+    tnet->Branch("step", &step);
+    tnet->Branch("reg", &reg);
+    tnet->Branch("visc", &visc);
+    tnet->Branch("ada", &ada);
+    std::function<void(const std::map<std::string, std::any>&)> popfunc = 
+      [&tnet, structura, nepoch, mean_loss, dev_loss, step, reg, visc, ada]
+      (const std::map<std::string, std::any>& notebook){
+        structura = notebook.at("struct"); 
+        nepoch = notebook.at("nepoch"); 
+        mean_loss = notebook.at("mean_loss"); 
+        dev_loss = notebook.at("dev_loss"); 
+        step = notebook.at("step"); 
+        reg = notebook.at("reg"); 
+        visc = notebook.at("visc"); 
+        ada = notebook.at("ada");
+        tnet->Fill();
+    };
+    net_ptr->set_spectator_popfunc(popfunc);
+
+
     net_ptr->train(Nepoch, in, out, weights, batch_size, minibatch_size);
     net_ptr->save();
 
     start = clock();
-    TFile* outfile = new TFile("out.root", "recreate");
-    TTree* t = new TTree("tph", "tph");
     float rec, rec_en, rec_lxe, rec_csi, weight;
     t->Branch("simen",  &simen);
     t->Branch("en",     &en);
@@ -138,6 +170,7 @@ int process(TString filename)
         t->Fill();
     }
     t->Write();
+    tnet->Write();
     fout.close();
     end = clock();
     std::cout << "Processing Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;

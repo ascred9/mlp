@@ -494,6 +494,10 @@ void Network::reverse_transform_output(std::vector<double>& out_value) const
 
 void Network::pop(std::pair<double, double> epsilon) const
 {
+    if (!m_spec_popfunc)
+        return;
+
+    // TODO: why root doesn't see any library?
     std::map<std::string, std::any> notebook;
 
     std::stringstream ss;
@@ -507,8 +511,7 @@ void Network::pop(std::pair<double, double> epsilon) const
     notebook["viscosity_rate"] = m_layer_deque.get_viscosity_rate();
     notebook["adagrad_rate"] = m_layer_deque.get_adagrad_rate();
     
-    if (m_spec_popfunc)
-        m_spec_popfunc(notebook);
+    m_spec_popfunc(notebook);
 }
 
 // TODO: Make an event weighting (+weight normalization), assembly of networks, also and randomazing of data order.
