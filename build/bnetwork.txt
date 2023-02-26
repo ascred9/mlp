@@ -5,17 +5,17 @@ nepoch 0
 loss_func GOOGLE
 step 0.5
 topology 6 7 3 1 
-active_funcs linear th th linear 
+active_funcs linear bent bent linear 
 input_transforms
-	linear 2 0 700
-	linear 2 0 700
-	linear 2 0 700
-	linear 2 0 1.571
-	linear 2 0 6.285
-	linear 2 37 51
+	normal 4 0 700 430 121.6
+	normal 4 0 700 117.7 109
+	normal 4 0 700 2.308 11.16
+	normal 4 0 1.571 0.6641 0.0687
+	normal 4 0 6.285 3.162 1.817
+	normal 4 37 51 39.45 2.473
 output_transforms
-	linear 2 0 1
-adagrad_rate 0.999
+	normal 4 0 1 0.7334 0.1632
+adagrad_rate 0.
 regulization_rate 0
 viscosity_rate 0.9
 layer 

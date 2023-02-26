@@ -10,6 +10,7 @@
  */
 
 
+#include <cmath>
 #include <functional>
 #include <iostream>
 #include <limits>
@@ -50,6 +51,26 @@ private:
 public:
     LinearTransformation() : Transformation(){};
     LinearTransformation(double bt_limit, double up_limit);
+    virtual void set_config() override;
+    virtual void print(std::ostream& os) const override;
+};
+
+class NormalTransformation: public Transformation
+{
+/*
+    Transform data to a distibutaion from -(m-a)/s to +(b+m)/s by the next way
+    x in [a, b] -> x - m in [a-m, b-m] -> (x - m) / (s) in [-(m-a)/s, (b+m)/s],
+    where m is mean and s is standard dev
+*/
+private:
+    double m_mean; // sum( x ) / n
+    double m_dev;  // sum( (x-m_mean)^2 )/ (n-1)
+
+public:
+    NormalTransformation() : Transformation(){};
+    NormalTransformation(double bt_limit, double up_limit);
+    void set_mean(double mean) {m_mean = mean;};
+    void set_dev(double dev) {m_dev = dev;};
     virtual void set_config() override;
     virtual void print(std::ostream& os) const override;
 };

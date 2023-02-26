@@ -396,5 +396,5 @@ double LayerDeque::get_regulization() const
     double regulization = 0.;
     for (const auto& pLayer: m_layers)
         regulization += pLayer->get_regulization();
-    return m_regulization_rate * regulization / m_outsize;
+    return pow(m_regulization_rate, -2.) * regulization / m_outsize;
 }

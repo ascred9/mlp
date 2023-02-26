@@ -37,8 +37,8 @@ int process(TString filename)
 
     BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
     //net_ptr->create(6, 1, {7, 3}, "build/bnetwork.txt"); return 1;
-    net_ptr->init_from_file("build/bnetwork.txt", "build/btest.txt");
-    //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
+    //net_ptr->init_from_file("build/bnetwork.txt", "build/btest.txt");
+    net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
     //NetworkPtr net_ptr = std::make_unique<Network>();
     //net_ptr->create(5, 1, {4}, "build/network.txt"); return 1;
@@ -57,18 +57,16 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 3*94;
+    int Nepoch = 1;//1*94;
     int Nentries = tph->GetEntries();
-    int batch_size = 1;
+    int batch_size = 8;
     int minibatch_size = 5;
-    double T = 25.;
+    double T = 50.;
     std::vector<std::vector<double>> in, out, weights;
 
     TFile* wfile = new TFile("weights.root");
     if (wfile->IsZombie())
-    {
       std::cout << "file read error" << std::endl;
-    }
 
     int count = 0;
 
@@ -76,12 +74,12 @@ int process(TString filename)
     for (int i=0; i < Nentries * 0.8; i++)
     {
         tph->GetEntry(i);
-        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.55) continue;
+        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>2) continue;
 
         double n_th = abs(th - M_PI/2);
         in.push_back({lxe, csi, bgo, n_th, phi, rho});
-        //out.push_back({(csi+lxe+bgo)/(simen)});
-        out.push_back({(simen)});
+        out.push_back({((lxe+csi+bgo)/simen)});
+        //out.push_back({simen});
 
         //double alpha = 0.814751 + 0.0502268 * 1. / (1. + std::exp((rho - 42.83) / 1.622));
         //double weight = std::exp(-abs(lxe + csi - alpha * simen) / T);
@@ -94,10 +92,10 @@ int process(TString filename)
     for (int i=0; i < Nentries * 0.8; i++)
     {
         tph->GetEntry(i);
-        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.55) continue;
+        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>2) continue;
       
         double n_th = abs(th - M_PI/2);
-        double weight = 1.; //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
+        double weight = 1; //std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
         weights.push_back({weight});
     }
 
@@ -118,16 +116,15 @@ int process(TString filename)
     tnet->Branch("visc", &visc);
     tnet->Branch("ada", &ada);
     std::function<void(const std::map<std::string, std::any>&)> popfunc = 
-      [&tnet, structura, nepoch, mean_loss, dev_loss, step, reg, visc, ada]
-      (const std::map<std::string, std::any>& notebook){
-        structura = notebook.at("struct"); 
-        nepoch = notebook.at("nepoch"); 
-        mean_loss = notebook.at("mean_loss"); 
-        dev_loss = notebook.at("dev_loss"); 
-        step = notebook.at("step"); 
-        reg = notebook.at("reg"); 
-        visc = notebook.at("visc"); 
-        ada = notebook.at("ada");
+      [&](const std::map<std::string, std::any>& notebook){
+        structura = std::any_cast<std::string>(notebook.at("struct")); 
+        nepoch = std::any_cast<unsigned int>(notebook.at("nepoch")); 
+        mean_loss = std::any_cast<double>(notebook.at("mean_loss")); 
+        dev_loss = std::any_cast<double>(notebook.at("dev_loss")); 
+        step = std::any_cast<double>(notebook.at("step")); 
+        reg = std::any_cast<double>(notebook.at("regulization_rate")); 
+        visc = std::any_cast<double>(notebook.at("viscosity_rate")); 
+        ada = std::any_cast<double>(notebook.at("adagrad_rate"));
         tnet->Fill();
     };
     net_ptr->set_spectator_popfunc(popfunc);
@@ -157,7 +154,7 @@ int process(TString filename)
     for (int i = Nentries * 0.8; i < Nentries; ++i)
     {
     	tph->GetEntry(i);
-        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.55) continue;
+        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>2) continue;
         double n_th = abs(th - M_PI/2);
 
         auto res = net_ptr->get_result({lxe, csi, bgo, n_th, phi, rho});

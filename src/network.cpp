@@ -21,6 +21,7 @@ static unsigned int MAX_LAYER_SIZE = 32;
 Network::Exception::Exception(const char* message)
 {
     m_message = std::string(message);
+    std::cout << m_message << std::endl;
 }
 
 Network::Network():
@@ -41,24 +42,43 @@ void Network::add_in_transform(const std::string& type)
 {
     if (type == "linear")
         m_in_transf.push_back(std::make_shared<LinearTransformation>());
+    else if (type == "normal")
+        throw Exception("You can't set NormalTransformation without pars");
 }
 
 void Network::add_in_transform(const std::string& type, const std::vector<double>& vars)
 {
     if (type == "linear")
         m_in_transf.push_back(std::make_shared<LinearTransformation>(vars.front(), vars.back()));
+    else if (type == "normal" && vars.size() == 4)
+    {
+        auto pTransf = std::make_shared<NormalTransformation>(vars.at(0), vars.at(1));
+        pTransf->set_mean(vars.at(2));
+        pTransf->set_dev(vars.at(3));
+        m_in_transf.push_back(pTransf);
+        
+    }
 }
 
 void Network::add_out_transform(const std::string& type)
 {
     if (type == "linear")
         m_out_transf.push_back(std::make_shared<LinearTransformation>());
+    else if (type == "normal")
+        throw Exception("You can't set NormalTransformation without pars");
 }
 
 void Network::add_out_transform(const std::string& type, const std::vector<double>& vars)
 {
     if (type == "linear")
         m_out_transf.push_back(std::make_shared<LinearTransformation>(vars.front(), vars.back()));
+    else if (type == "normal" && vars.size() == 4)
+    {
+        auto pTransf = std::make_shared<NormalTransformation>(vars.at(0), vars.at(1));
+        pTransf->set_mean(vars.at(2));
+        pTransf->set_dev(vars.at(3));
+        m_out_transf.push_back(pTransf);
+    }
 }
 
 bool Network::init_from_file(const std::string& in_file_name, const std::string& out_file_name="")
@@ -440,8 +460,8 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
         */
 
         // Stochastic descent
-        double period = 30.;
-        double amp = .5;
+        double period = 1*30.;
+        double amp = .05;
         double step = amp * 0.5 * (1. + cos(std::abs(m_nepoch / period - int(m_nepoch / period / M_PI) * M_PI )));
         step = step == 0? amp: step;
         m_layer_deque.set_step(step);

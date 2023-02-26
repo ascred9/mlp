@@ -95,3 +95,30 @@ void LinearTransformation::print(std::ostream& os) const
     }
     os << std::endl;
 }
+
+NormalTransformation::NormalTransformation(double bt_limit, double up_limit) : Transformation(bt_limit, up_limit)
+{
+}
+
+void NormalTransformation::set_config()
+{
+    if (std::isnan(m_mean) || std::isnan(m_dev))
+        throw std::invalid_argument("No all pars are got to NormalTransformation");
+
+    m_transf = [this](double x){return (x - m_mean)/m_dev;};
+    m_reverse_transf = [this](double y){return y * m_dev + m_mean;};
+}
+    
+void NormalTransformation::print(std::ostream& os) const
+{
+    os << "normal ";
+    if (m_limits_set)
+    {
+        os << "4 " << m_bt_limit << " " << m_up_limit << " " << m_mean << " " << m_dev;
+    }
+    else
+    {
+        throw std::invalid_argument("NormalTransformation: this point can't be reached");
+    }
+    os << std::endl;
+}

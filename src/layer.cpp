@@ -202,8 +202,13 @@ double Layer::get_regulization()
 
 void Layer::add_gradient(const std::pair<Matrix, Vector>& dL)
 {
-    m_gradW += (dL.first + m_regulization_rate * get_matrixW());
-    m_gradB += (dL.second + m_regulization_rate * get_vectorB());
+    m_gradW += dL.first;
+    m_gradB += dL.second;
+    if (m_regulization_rate > 0.)
+    {
+        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW();
+        m_gradB += pow(m_regulization_rate, -2.) * get_vectorB();
+    }
 }
 
 void Layer::print(std::ostream &os) const

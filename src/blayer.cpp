@@ -128,8 +128,13 @@ void BayesianLayer::generate_weights(const std::string& init_type)
 void BayesianLayer::add_gradient(const std::pair<Matrix, Vector>& dL)
 {
     Layer::add_gradient(dL);
-    m_gradDW.array() += m_epsilonW.array() * (dL.first + m_regulization_rate * get_matrixW()).array(); 
-    m_gradDB.array() += m_epsilonB.array() * (dL.second + m_regulization_rate * get_vectorB()).array();
+    m_gradDW.array() += m_epsilonW.array() * (dL.first).array(); 
+    m_gradDB.array() += m_epsilonB.array() * (dL.second).array();
+    if (m_regulization_rate > 0.)
+    {
+        m_gradDW.array() += pow(m_regulization_rate, -2.) * m_devMatrixW.array() - m_devMatrixW.array().inverse(); 
+        m_gradDB.array() += pow(m_regulization_rate, -2.) * m_devVectorB.array() - m_devVectorB.array().inverse(); 
+    }
 }
 
 
@@ -213,8 +218,8 @@ void BayesianLayer::update_weights(double step)
         Vector::Constant(1, m_out_size, ep).array()).sqrt();
 
     auto positive = [](double a){return a > 0? a: -a;};
-    m_devMatrixW = m_devMatrixW.unaryExpr(positive);
-    m_devVectorB = m_devVectorB.unaryExpr(positive);
+    //m_devMatrixW = m_devMatrixW.unaryExpr(positive);
+    //m_devVectorB = m_devVectorB.unaryExpr(positive);
 
     // Decrease speed for the next iteration
     m_speedW *= m_viscosity_rate;
