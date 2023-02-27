@@ -36,8 +36,8 @@ int process(TString filename)
     tph->SetBranchAddress("rho",	&rho);
 
     BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
-    //net_ptr->create(6, 1, {7, 3}, "build/bnetwork.txt"); return 1;
-    //net_ptr->init_from_file("build/bnetwork.txt", "build/btest.txt");
+    //net_ptr->create(5, 1, {7, 3}, "build/bnetwork.txt"); return 1;
+    //net_ptr->init_from_file("build/bnetwork.txt", "build/bseam.txt");
     net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
     //NetworkPtr net_ptr = std::make_unique<Network>();
@@ -57,9 +57,9 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 1;//1*94;
+    int Nepoch = 1*94;
     int Nentries = tph->GetEntries();
-    int batch_size = 8;
+    int batch_size = 1;
     int minibatch_size = 5;
     double T = 50.;
     std::vector<std::vector<double>> in, out, weights;
@@ -74,11 +74,11 @@ int process(TString filename)
     for (int i=0; i < Nentries * 0.8; i++)
     {
         tph->GetEntry(i);
-        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>2) continue;
+        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
 
         double n_th = abs(th - M_PI/2);
-        in.push_back({lxe, csi, bgo, n_th, phi, rho});
-        out.push_back({((lxe+csi+bgo)/simen)});
+        in.push_back({lxe, csi, n_th, phi, rho});
+        out.push_back({((lxe+csi)/simen)});
         //out.push_back({simen});
 
         //double alpha = 0.814751 + 0.0502268 * 1. / (1. + std::exp((rho - 42.83) / 1.622));
@@ -92,7 +92,7 @@ int process(TString filename)
     for (int i=0; i < Nentries * 0.8; i++)
     {
         tph->GetEntry(i);
-        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>2) continue;
+        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
       
         double n_th = abs(th - M_PI/2);
         double weight = 1; //std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
@@ -154,12 +154,12 @@ int process(TString filename)
     for (int i = Nentries * 0.8; i < Nentries; ++i)
     {
     	tph->GetEntry(i);
-        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>2) continue;
+        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
         double n_th = abs(th - M_PI/2);
 
-        auto res = net_ptr->get_result({lxe, csi, bgo, n_th, phi, rho});
+        auto res = net_ptr->get_result({lxe, csi, n_th, phi, rho});
         rec = res.at(0);
-        rec_en = (lxe+csi+bgo)/rec;
+        rec_en = (lxe+csi)/rec;
         rec_lxe = lxe/(lxe+csi) * rec;
         rec_csi = csi/(lxe+csi) * rec;
 
