@@ -191,12 +191,15 @@ void Layer::generate_weights(const std::string& init_type)
     m_vectorB *= coef;
 }
 
-double Layer::get_regulization()
+double Layer::get_regulization() const
 {
+    if (m_regulization_rate == 0)
+        return 0.;
+
     double regulization = 0.;
-    regulization += get_matrixW().array().pow(2).sum();
-    regulization += get_vectorB().array().pow(2).sum();
-    regulization *= 0.5;
+    regulization += m_matrixW.array().pow(2).sum();
+    regulization += m_vectorB.array().pow(2).sum();
+    regulization *= pow(m_regulization_rate, -2) * 0.5;
     return regulization;
 }
 

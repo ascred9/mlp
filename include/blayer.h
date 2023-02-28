@@ -56,6 +56,7 @@ public:
     ~BayesianLayer();
     virtual void add_gradient(const std::pair<Matrix, Vector>& dL) override;
     virtual void generate_weights(const std::string& init_type) override;
+    virtual double get_regulization() const override;
     virtual void print(std::ostream& os) const override;
     virtual bool read(std::istream& fin) override;
     virtual void reset_layer(const std::map<std::string, double*>& learning_pars) override;

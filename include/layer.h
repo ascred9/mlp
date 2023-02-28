@@ -75,7 +75,7 @@ public:
     ~Layer();
     virtual void add_gradient(const std::pair<Matrix, Vector>& dL);
     virtual void generate_weights(const std::string& init_type);
-    virtual double get_regulization();
+    virtual double get_regulization() const;
     virtual void print(std::ostream& os) const;
     virtual bool read(std::istream& fin);
     virtual void reset_layer(const std::map<std::string, double*>& learning_pars);

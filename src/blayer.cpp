@@ -125,6 +125,20 @@ void BayesianLayer::generate_weights(const std::string& init_type)
     m_devVectorB = 0.3 * m_vectorB.array().abs();
 }
 
+double BayesianLayer::get_regulization() const
+{
+    if (m_regulization_rate == 0)
+        return 0.;
+
+    double regulization = 0.;
+    regulization += m_matrixW.array().pow(2).sum() + m_devMatrixW.array().pow(2).sum();
+    regulization += m_vectorB.array().pow(2).sum() + m_devVectorB.array().pow(2).sum();
+    regulization *= pow(m_regulization_rate, -2) * 0.5;
+    //regulization += log(m_devMatrixW.array().abs().inverse() * m_regulization_rate).sum();
+    //regulization += log(m_devVectorB.array().abs().inverse() * m_regulization_rate).sum();
+    return regulization;
+}
+
 void BayesianLayer::add_gradient(const std::pair<Matrix, Vector>& dL)
 {
     Layer::add_gradient(dL);
@@ -132,8 +146,10 @@ void BayesianLayer::add_gradient(const std::pair<Matrix, Vector>& dL)
     m_gradDB.array() += m_epsilonB.array() * (dL.second).array();
     if (m_regulization_rate > 0.)
     {
-        m_gradDW.array() += pow(m_regulization_rate, -2.) * m_devMatrixW.array() - m_devMatrixW.array().inverse(); 
-        m_gradDB.array() += pow(m_regulization_rate, -2.) * m_devVectorB.array() - m_devVectorB.array().inverse(); 
+        m_gradDW.array() += pow(m_regulization_rate, -2.) * m_devMatrixW.array() * m_epsilonW.array().pow(2) - 
+            m_devMatrixW.array().inverse() * m_epsilonW.array().pow(2); 
+        m_gradDB.array() += pow(m_regulization_rate, -2.) * m_devVectorB.array() * m_epsilonB.array().pow(2) -
+            m_devVectorB.array().inverse() * m_epsilonB.array().pow(2); 
     }
 }
 
@@ -217,7 +233,7 @@ void BayesianLayer::update_weights(double step)
       (m_memoryDB.array() +
         Vector::Constant(1, m_out_size, ep).array()).sqrt();
 
-    auto positive = [](double a){return a > 0? a: -a;};
+    //auto positive = [](double a){return a > 0? a: -a;};
     //m_devMatrixW = m_devMatrixW.unaryExpr(positive);
     //m_devVectorB = m_devVectorB.unaryExpr(positive);
 

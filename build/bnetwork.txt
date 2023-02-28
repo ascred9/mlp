@@ -2,10 +2,10 @@ numb_input 5
 numb_output 1
 deep 4
 nepoch 0
-loss_func LS
+loss_func GOOGLE
 step 0.5
 topology 5 7 3 1 
-active_funcs linear bent bent linear 
+active_funcs linear th th linear 
 input_transforms
  	normal 4 0 900 434 148.8
 	normal 4 0 1000 254.5 152.5
@@ -14,8 +14,8 @@ input_transforms
 	normal 4 37 51 39.96 2.85
 output_transforms
 	normal 4 0 1 0.8114 0.1044
-adagrad_rate 0
-regulization_rate 0.001
+adagrad_rate 0.999
+regulization_rate 0
 viscosity_rate 0.9
 layer 
 [   0.511892   0.534943  -0.560021  -0.620869  -0.649207  -0.681946  -0.657006

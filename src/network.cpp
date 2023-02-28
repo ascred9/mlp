@@ -462,7 +462,7 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
         // Stochastic descent
         double period = 1*30.;
         double amp = .005;
-        double step = amp * 0.5 * (1. + cos(std::abs(m_nepoch / period - int(m_nepoch / period / M_PI) * M_PI )));
+        double step = amp / (m_nepoch + 1) ;//amp * 0.5 * (1. + cos(std::abs(m_nepoch / period - int(m_nepoch / period / M_PI) * M_PI )));
         step = step == 0? amp: step;
         m_layer_deque.set_step(step);
 
