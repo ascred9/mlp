@@ -43,6 +43,20 @@ protected:
     std::mt19937 m_gen;
     std::normal_distribution<> m_gaus{0., 1.};
 
+    std::function<const Matrix(const Matrix&)> m_Wsigma = [](const Matrix& rho){
+        return log(rho.array().exp() + 1.);
+    };
+    std::function<const Matrix(const Matrix&)> m_pWsigma = [](const Matrix& rho){
+        return rho.array().exp() / (rho.array().exp() + 1.);
+    };
+
+    std::function<const Vector(const Vector&)> m_Bsigma = [](const Vector& rho){
+        return log(rho.array().exp() + 1.);
+    };
+    std::function<const Vector(const Vector&)> m_pBsigma = [](const Vector& rho){
+        return rho.array().exp() / (rho.array().exp() + 1.);
+    };
+
     virtual const Matrix& get_matrixW() const override;
     virtual const Vector& get_vectorB() const override;
 
