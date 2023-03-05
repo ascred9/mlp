@@ -135,7 +135,7 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     m_loss_type = loss_type;
     if (m_loss_type == "LS")
     {
-        m_floss = [this](const Vector& real, const Vector& output){return 0.5 * (output - real).array().pow(2) / m_outsize ;};
+        m_floss = [this](const Vector& real, const Vector& output){return (0.5 * (output - real).array().pow(2))/ m_outsize ;};
         m_fploss = [this](const Vector& real, const Vector& output){return ((output-real).array()) / m_outsize;};
     }
     else if (m_loss_type == "LQ")
@@ -358,12 +358,25 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
         }
     }
 
-    Vector delta = (W.array() * m_fploss(Y, *pX_layers.back()).array()) *
-      (1 + m_alpha*(1-m_alpha) * (m_floss(Y, *pX_layers.back()) - m_ema).array())
-        * m_layers.back()->calculateXp( *pZ_layers.back() ).array();
+    Vector df = m_fploss(Y, *pX_layers.back());
+    Vector delta = (W.array() * df.array()) *
+        m_layers.back()->calculateXp( *pZ_layers.back() ).array();
 
-    m_ema *= 1. - m_alpha;
-    m_ema += m_alpha * m_floss(Y, *pX_layers.back());
+    if (m_alpha != 0)
+    {
+        Vector f = m_floss(Y, *pX_layers.back());
+        Vector dx = m_alpha * m_ema;
+
+        m_ema *= m_alpha;
+        m_ema += (1 - m_alpha) * f;
+
+        dx += (1 - m_alpha) * m_ema;
+        dx.array() /= m_ema.array().pow(2);
+
+        delta.array() *= dx.array();
+    }
+
+
 
     for (int idx = m_layers.size()-2; idx > -1; --idx)
     {

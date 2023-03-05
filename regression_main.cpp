@@ -57,7 +57,7 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 10; //2*94;
+    int Nepoch = 20; //2*94;
     int Nentries = tph->GetEntries();
     int batch_size = 1;
     int minibatch_size = 5;
@@ -78,7 +78,7 @@ int process(TString filename)
 
         double n_th = abs(th - M_PI/2);
         in.push_back({lxe, csi, n_th, phi, rho});
-        out.push_back({((lxe+csi)/simen)});
+        out.push_back({simen}); //((lxe+csi)/simen)});
         //out.push_back({simen});
 
         //double alpha = 0.814751 + 0.0502268 * 1. / (1. + std::exp((rho - 42.83) / 1.622));

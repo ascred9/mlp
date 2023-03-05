@@ -57,11 +57,11 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 20;//5*94;
+    int Nepoch = 40;//5*94;
     int Nentries = tph->GetEntries();
     int batch_size = 1;
     int minibatch_size = 5;
-    double T = 50.;
+    double T = .1;
     std::vector<std::vector<double>> in, out, weights;
 
     TFile* wfile = new TFile("weights.root");
@@ -95,7 +95,7 @@ int process(TString filename)
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.57 || bgo > 0) continue;
       
         double n_th = abs(th - M_PI/2);
-        double weight = 1; //std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
+        double weight = std::exp((n_th-0.57)/T);//std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
         weights.push_back({weight});
     }
 
