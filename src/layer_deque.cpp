@@ -138,6 +138,20 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
         m_floss = [this](const Vector& real, const Vector& output){return (0.5 * (output - real).array().pow(2))/ m_outsize ;};
         m_fploss = [this](const Vector& real, const Vector& output){return ((output-real).array()) / m_outsize;};
     }
+    else if (m_loss_type == "HEAVY")
+    {
+        m_floss = [this](const Vector& real, const Vector& output){auto v = (0.5 * (output - real).array().pow(2))/ m_outsize ;
+            double delta = 1., val = 10.;
+            auto h = val * ((output - real).array().abs() - delta).max(0.);
+            return v + h;
+        };
+        m_fploss = [this](const Vector& real, const Vector& output){auto v = ((output - real).array())/ m_outsize ;
+            double delta = 1., val = 10.;
+            auto h = val * (output - real).unaryExpr([delta](double a){return abs(a) < delta ? 0 :
+                ( a > 0 ? 1. : -1.);}).array();
+            return v + h;
+        };
+    }
     else if (m_loss_type == "LQ")
     {
         m_floss = [this](const Vector& real, const Vector& output){return 0.125 * ((output - real).array() * (output - real).array() * 

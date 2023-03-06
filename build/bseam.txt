@@ -2,7 +2,7 @@ numb_input 5
 numb_output 1
 deep 4
 nepoch 1
-loss_func LS
+loss_func HEAVY
 step 0.00025
 topology 5 7 3 1 
 active_funcs linear bent bent linear 
@@ -15,7 +15,7 @@ input_transforms
 output_transforms
 	normal 4 0 1 750 28.87
 adagrad_rate 0.999
-regulization_rate 1e4
+regulization_rate 0
 viscosity_rate 0.9
 layer 
 [     1.5099   0.715329   -1.07757  -0.734122  -0.799975   -1.40141   -2.00486

@@ -43,7 +43,7 @@ private:
     double m_viscosity_rate;
     std::map<std::string, double*> m_pars_map; // collect all rate to ine container
 
-    double m_alpha = 1e-3;
+    double m_alpha = 0;//1e-3;
     mutable Vector m_ema;
 
     std::vector<std::pair<Matrix, Vector>> get_gradient(const std::vector<double>& input, const std::vector<double>& output,
