@@ -135,18 +135,49 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     m_loss_type = loss_type;
     if (m_loss_type == "LS")
     {
-        m_floss = [this](const Vector& real, const Vector& output){return (0.5 * (output - real).array().pow(2))/ m_outsize ;};
+        m_floss = [this](const Vector& real, const Vector& output){return (0.5 * (output - real).array().pow(2))/ m_outsize;};
         m_fploss = [this](const Vector& real, const Vector& output){return ((output-real).array()) / m_outsize;};
+    }
+    else if (m_loss_type == "LOG")
+    {
+        double l = 1.;
+        m_floss = [this, l](const Vector& real, const Vector& output){return ((0.5/(l*l) * (output - real).array().pow(2)) - 
+            0.5 * ((output-real).array().pow(2) / (l*l)).log())/ m_outsize;};
+        m_fploss = [this, l](const Vector& real, const Vector& output){return ((output-real).array()/(l*l)
+            - (output-real).array().inverse()) / m_outsize;};
+
+    }
+    else if (m_loss_type == "CUSTOM")
+    {
+        m_floss = [this](const Vector& real, const Vector& output){return (0.5 * (output - real).array().pow(2))/ m_outsize;};
+        m_fploss = [this](const Vector& real, const Vector& output){
+            static double Nleft = 0, Nright = 0;
+            double al = 0.8;
+            //std::cout << Nleft << " " << Nright << " " << Nleft+Nright << std::endl;
+            if (real[0]<0)
+            {
+                Vector val = (output-real).array() / m_outsize;
+                if (val[0] < 0){ if(Nleft<0){val *= 1;}else{val *= -1;}; Nleft = al*Nleft-(1-al);};
+                if (val[0] > 0){ if(Nleft>0){val *= 1;}else{val *= -1;}; Nleft = al*Nleft+(1-al);};
+                return Nleft != 0 ? val : Vector::Zero(real.size());
+            }
+            else
+            {
+                Vector val = (output-real).array() / m_outsize;
+                if (val[0] < 0){ if(Nright<0){val *= 1;}else{val *= -1;}; Nright = al*Nright-(1-al);};
+                if (val[0] > 0){ if(Nright>0){val *= 1;}else{val *= -1;}; Nright = al*Nright+(1-al);};
+                return Nright != 0 ? val : Vector::Zero(real.size());
+            }
+        };
     }
     else if (m_loss_type == "HEAVY")
     {
-        m_floss = [this](const Vector& real, const Vector& output){auto v = (0.5 * (output - real).array().pow(2))/ m_outsize ;
-            double delta = 1., val = 10.;
-            auto h = val * ((output - real).array().abs() - delta).max(0.);
+        double delta = 0.5, val = 190.;
+        m_floss = [this, delta, val](const Vector& real, const Vector& output){auto v = (0.5 * (output - real).array().pow(2))/ m_outsize ;
+            auto h = val * (output-real).unaryExpr([delta](double a){return abs(a) < delta ? 0 : abs(a) - delta;}).array();
             return v + h;
         };
-        m_fploss = [this](const Vector& real, const Vector& output){auto v = ((output - real).array())/ m_outsize ;
-            double delta = 1., val = 10.;
+        m_fploss = [this, delta, val](const Vector& real, const Vector& output){auto v = ((output - real).array())/ m_outsize ;
             auto h = val * (output - real).unaryExpr([delta](double a){return abs(a) < delta ? 0 :
                 ( a > 0 ? 1. : -1.);}).array();
             return v + h;
@@ -379,13 +410,11 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
     if (m_alpha != 0)
     {
         Vector f = m_floss(Y, *pX_layers.back());
-        Vector dx = m_alpha * m_ema;
 
         m_ema *= m_alpha;
         m_ema += (1 - m_alpha) * f;
 
-        dx += (1 - m_alpha) * m_ema;
-        dx.array() /= m_ema.array().pow(2);
+        Vector dx = (m_ema.array().inverse() - Vector::Constant(m_ema.size(), 1./(900)).array());
 
         delta.array() *= dx.array();
     }
