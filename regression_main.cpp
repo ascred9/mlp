@@ -36,7 +36,7 @@ int process(TString filename)
     tph->SetBranchAddress("rho",	&rho);
 
     BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
-    //net_ptr->create(5, 1, {10, 5}, "build/bnetwork.txt"); return 1;
+    //net_ptr->create(5, 1, {5, 5}, "build/bnetwork.txt"); return 1;
     //net_ptr->init_from_file("build/bnetwork.txt", "build/bseam.txt");
     net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
@@ -76,10 +76,12 @@ int process(TString filename)
         tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
 
+        //if ((lxe+csi)/simen < 0.8) continue;
+
         double n_th = abs(th - M_PI/2);
         in.push_back({lxe, csi, n_th, phi, rho});
-        out.push_back({simen}); //((lxe+csi)/simen)});
-        //out.push_back({simen});
+        //out.push_back({((lxe+csi)/simen)});
+        out.push_back({simen});
 
         double weight = 1;//std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
         weights.push_back({weight});

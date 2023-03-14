@@ -9,6 +9,7 @@
 void draw_macro()
 {
     bool flag = false;
+    //bool flag = true;
 
     TFile* infile = new TFile("out.root");
     if (infile->IsZombie())

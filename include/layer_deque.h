@@ -41,9 +41,9 @@ private:
     double m_adagrad_rate;
     double m_regulization_rate;
     double m_viscosity_rate;
-    std::map<std::string, double*> m_pars_map; // collect all rate to ine container
+    std::map<std::string, double*> m_pars_map; // collect all rate to the one container
 
-    double m_alpha = 0.9;
+    double m_alpha = 0;
     mutable Vector m_ema;
 
     std::vector<std::pair<Matrix, Vector>> get_gradient(const std::vector<double>& input, const std::vector<double>& output,

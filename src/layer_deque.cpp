@@ -147,6 +147,17 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
             - (output-real).array().inverse()) / m_outsize;};
 
     }
+    else if (m_loss_type == "LSshift")
+    {
+        m_floss = [this](const Vector& real, const Vector& output){return (0.5 * ((output - real).array().pow(2)) + 2*(output-real).array().abs()) / m_outsize;};
+        m_fploss = [this](const Vector& real, const Vector& output){return (output-real).unaryExpr([](double v){return v + 2*v/abs(v);}) / m_outsize;};
+    }
+
+    else if (m_loss_type == "ABSO")
+    {
+        m_floss = [this](const Vector& real, const Vector& output){return (0.5 * ((output - real).array().pow(2) - 1).abs()) / m_outsize;};
+        m_fploss = [this](const Vector& real, const Vector& output){return (output-real).unaryExpr([](double v){return (v*v-1)/abs(v*v-1) * v;}) / m_outsize;};
+    }
     else if (m_loss_type == "CUSTOM")
     {
         m_floss = [this](const Vector& real, const Vector& output){return (0.5 * (output - real).array().pow(2))/ m_outsize;};
@@ -228,7 +239,7 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     else if (m_loss_type == "GOOGLE")
     {
         double a = -200.;
-        double c =  100.;
+        double c =  1.;
         auto f =   [a, c](double x) {return abs(a-2.)/a * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2.) - 1.);};
         auto df =  [a, c](double x) {return  x/(c*c) * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2. - 1) );};
         m_floss =  [this, f](const Vector& real, const Vector& output) {return (output-real).unaryExpr(f) / m_outsize; };
@@ -414,7 +425,7 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
         m_ema *= m_alpha;
         m_ema += (1 - m_alpha) * f;
 
-        Vector dx = (m_ema.array().inverse() - Vector::Constant(m_ema.size(), 1./(900)).array());
+        Vector dx = ( ((2-m_alpha)*m_ema.array() - (1-m_alpha)*f.array())* m_ema.array().pow(2).inverse() - 1. );
 
         delta.array() *= dx.array();
     }
