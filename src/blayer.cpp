@@ -15,22 +15,6 @@ BayesianLayer::~BayesianLayer()
 {
 }
 
-const Matrix& BayesianLayer::get_matrixW() const
-{
-    if (m_trainMode)
-        return m_tempMatrixW;
-    else
-        return m_matrixW;
-}
-
-const Vector& BayesianLayer::get_vectorB() const
-{
-    if (m_trainMode)
-        return m_tempVectorB;
-    else
-        return m_vectorB;
-}
-
 void BayesianLayer::set_devMatrixW(const std::vector<double>& devWeights)
 {
     if (devWeights.size() != m_size * m_out_size)
@@ -134,23 +118,23 @@ double BayesianLayer::get_regulization() const
     regulization += m_matrixW.array().pow(2).sum() + m_Wsigma(m_devMatrixW).array().pow(2).sum();
     regulization += m_vectorB.array().pow(2).sum() + m_Bsigma(m_devVectorB).array().pow(2).sum();
     regulization *= pow(m_regulization_rate, -2) * 0.5;
-    //regulization += log(m_Wsigma(m_devMatrixW).array().inverse() * m_regulization_rate).sum();
-    //regulization += log(m_Bsigma(m_devVectorB).array().inverse() * m_regulization_rate).sum();
+    regulization += log(m_Wsigma(m_devMatrixW).array().inverse() * m_regulization_rate).sum();
+    regulization += log(m_Bsigma(m_devVectorB).array().inverse() * m_regulization_rate).sum();
     return regulization;
 }
 
 void BayesianLayer::add_gradient(const std::pair<Matrix, Vector>& dL)
 {
     Layer::add_gradient(dL);
-    m_gradDW.array() += m_epsilonW.array() * (dL.first).array(); 
-    m_gradDB.array() += m_epsilonB.array() * (dL.second).array();
+    m_gradDW.array() += m_epsilonW.array() * (dL.first).array() * m_pWsigma(m_devMatrixW).array(); 
+    m_gradDB.array() += m_epsilonB.array() * (dL.second).array() * m_pBsigma(m_devVectorB).array();
     if (m_regulization_rate > 0.)
     {
-        m_gradDW.array() += (pow(m_regulization_rate, -2.) * m_Wsigma(m_devMatrixW).array() * m_epsilonW.array().pow(2) 
-            //- m_Wsigma(m_devMatrixW).array().inverse()
+        m_gradDW.array() += (pow(m_regulization_rate, -2.) * m_Wsigma(m_devMatrixW).array()// * m_epsilonW.array().pow(2) 
+            - m_Wsigma(m_devMatrixW).array().inverse()
             ) * m_pWsigma(m_devMatrixW).array();
-        m_gradDB.array() += (pow(m_regulization_rate, -2.) * m_Bsigma(m_devVectorB).array() * m_epsilonB.array().pow(2)
-            //- m_Bsigma(m_devVectorB).array().inverse()
+        m_gradDB.array() += (pow(m_regulization_rate, -2.) * m_Bsigma(m_devVectorB).array()// * m_epsilonB.array().pow(2)
+            - m_Bsigma(m_devVectorB).array().inverse()
             ) * m_pBsigma(m_devVectorB).array(); 
     }
 }
@@ -197,7 +181,7 @@ void BayesianLayer::update()
 
 void BayesianLayer::update_weights(double step)
 {
-    double ep = 1e-8;
+    double ep = m_adagrad_rate > 0. ? 1e-8 : 1.;
 
     // Update speed
     double speed_boost = 1.;
@@ -207,17 +191,20 @@ void BayesianLayer::update_weights(double step)
     m_speedW  += speed_boost * (1-m_viscosity_rate) * m_gradW;
     m_speedB  += speed_boost * (1-m_viscosity_rate) * m_gradB;
     m_speedDW += speed_boost * (1-m_viscosity_rate) * m_gradDW;
-    m_speedDB += speed_boost * (1-m_viscosity_rate) * m_gradDB;
+    m_speedDB += speed_boost * (1-m_viscosity_rate) * m_gradDB; // isn't used ???
 
     // Update memory
     double memory_boost = 1.;
     if (m_n_iteration < 1./(1-m_adagrad_rate))
         memory_boost = 1./(1-m_adagrad_rate);
 
-    m_memoryW.array()  += memory_boost * (1-m_adagrad_rate) * m_gradW.array().pow(2);
-    m_memoryB.array()  += memory_boost * (1-m_adagrad_rate) * m_gradB.array().pow(2);
-    m_memoryDW.array() += memory_boost * (1-m_adagrad_rate) * m_gradDW.array().pow(2);
-    m_memoryDB.array() += memory_boost * (1-m_adagrad_rate) * m_gradDB.array().pow(2);
+    if (m_adagrad_rate > 0.)
+    {
+        m_memoryW.array()  += memory_boost * (1-m_adagrad_rate) * m_gradW.array().pow(2);
+        m_memoryB.array()  += memory_boost * (1-m_adagrad_rate) * m_gradB.array().pow(2);
+        m_memoryDW.array() += memory_boost * (1-m_adagrad_rate) * m_gradDW.array().pow(2);
+        m_memoryDB.array() += memory_boost * (1-m_adagrad_rate) * m_gradDB.array().pow(2);
+    }
 
     // Update weight matrix
     m_matrixW.array() -= step * m_speedW.array() /
@@ -228,10 +215,10 @@ void BayesianLayer::update_weights(double step)
         Vector::Constant(1, m_out_size, ep).array()).sqrt();
 
     // Update sigma weight matrix
-    m_devMatrixW.array() -= step * (m_gradDW.array()) /
+    m_devMatrixW.array() -= step * (m_speedDW.array()) /
       (m_memoryDW.array() +
         Matrix::Constant(m_size, m_out_size, ep).array()).sqrt();
-    m_devVectorB.array() -= step * (m_gradDB.array()) /
+    m_devVectorB.array() -= step * (m_speedDB.array()) /
       (m_memoryDB.array() +
         Vector::Constant(1, m_out_size, ep).array()).sqrt();
 
@@ -246,7 +233,7 @@ void BayesianLayer::update_weights(double step)
     m_speedDB *= m_viscosity_rate;
 
     // Decrease memory fot the next iteration
-    if (m_adagrad_rate > 1e-4)
+    if (m_adagrad_rate > 0.)
     {
         m_memoryW  *= m_adagrad_rate;
         m_memoryB  *= m_adagrad_rate;

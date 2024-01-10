@@ -15,6 +15,8 @@
 #include <memory>
 #include <string>
 #include <iostream>
+#include <ctime>
+#include <random>
 
 #include "eigen-3.4.0/Eigen/Core"
 
@@ -42,6 +44,8 @@ protected:
     // Muscle of layer
     Matrix m_matrixW;
     Vector m_vectorB;
+    Matrix m_tempMatrixW;
+    Vector m_tempVectorB;
     Matrix m_gradW;
     Vector m_gradB;
     Matrix m_speedW;
@@ -50,17 +54,22 @@ protected:
     Vector m_memoryB;
     const double m_bias;
 
+    // Generator for dropout
+    std::mt19937 m_gen;
+    std::uniform_real_distribution<> m_uniform{0., 1.};
+
     // Learning parameters
     double m_regulization_rate;
     double m_viscosity_rate;
     double m_adagrad_rate;
+    double m_dropout_rate;
 
     const Vector calculate(const Vector& input) const;
     const Vector calculateZ(const Vector& inputX) const;
     const Vector calculateX(const Vector& inputZ) const;
     const Vector calculateXp(const Vector& inputZ) const;
-    virtual const Matrix& get_matrixW() const;
-    virtual const Vector& get_vectorB() const;
+    const Matrix& get_matrixW() const;
+    const Vector& get_vectorB() const;
     const unsigned int& size() const; 
     void set_in_size(unsigned int in_size);
     void set_out_size(unsigned int out_size);

@@ -37,11 +37,11 @@ int process(TString filename)
 
     BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
     //net_ptr->create(5, 1, {5, 5}, "build/bnetwork.txt"); return 1;
-    //net_ptr->init_from_file("build/bnetwork.txt", "build/bseam.txt");
-    net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
+    net_ptr->init_from_file("build/bnetwork.txt", "build/bseam.txt");
+    //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
     //NetworkPtr net_ptr = std::make_unique<Network>();
-    //net_ptr->create(5, 1, {4}, "build/network.txt"); return 1;
+    //net_ptr->create(5, 1, {10, 10, 10}, "build/network.txt"); return 1;
     //net_ptr->init_from_file("build/network.txt", "build/test.txt");
 
     if (net_ptr == nullptr)
@@ -57,7 +57,7 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 10; //2*94;
+    int Nepoch = 32; //2*94;
     int Nentries = tph->GetEntries();
     int batch_size = 1;
     int minibatch_size = 5;
@@ -99,7 +99,7 @@ int process(TString filename)
     TTree* tnet = new TTree("tnet", "tnet");
     std::string structura;
     int nepoch;
-    float mean_loss, dev_loss, step, reg, visc, ada;
+    float mean_loss, dev_loss, step, reg, visc, ada, drop;
     tnet->Branch("struct", &structura);
     tnet->Branch("nepoch", &nepoch);
     tnet->Branch("mean_loss", &mean_loss);
@@ -108,6 +108,7 @@ int process(TString filename)
     tnet->Branch("reg", &reg);
     tnet->Branch("visc", &visc);
     tnet->Branch("ada", &ada);
+    tnet->Branch("drop", &drop);
     std::function<void(const std::map<std::string, std::any>&)> popfunc = 
       [&](const std::map<std::string, std::any>& notebook){
         structura = std::any_cast<std::string>(notebook.at("struct")); 
@@ -118,6 +119,7 @@ int process(TString filename)
         reg = std::any_cast<double>(notebook.at("regulization_rate")); 
         visc = std::any_cast<double>(notebook.at("viscosity_rate")); 
         ada = std::any_cast<double>(notebook.at("adagrad_rate"));
+        drop = std::any_cast<double>(notebook.at("dropout_rate"));
         tnet->Fill();
     };
     net_ptr->set_spectator_popfunc(popfunc);

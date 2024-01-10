@@ -10,9 +10,6 @@
  */
 
 
-#include <ctime>
-#include <random>
-
 #include "eigen-3.4.0/Eigen/Core"
 
 #include "layer.h"
@@ -30,8 +27,6 @@ protected:
     Vector m_devVectorB;
     Matrix m_epsilonW;
     Vector m_epsilonB;
-    Matrix m_tempMatrixW;
-    Vector m_tempVectorB;
 
     Matrix m_gradDW;
     Vector m_gradDB;
@@ -40,7 +35,6 @@ protected:
     Matrix m_memoryDW;
     Vector m_memoryDB;
 
-    std::mt19937 m_gen;
     std::normal_distribution<> m_gaus{0., 1.};
 
     std::function<const Matrix(const Matrix&)> m_Wsigma = [](const Matrix& rho){
@@ -57,16 +51,13 @@ protected:
         return rho.array().exp() / (rho.array().exp() + 1.);
     };
 
-    virtual const Matrix& get_matrixW() const override;
-    virtual const Vector& get_vectorB() const override;
-
     void set_devMatrixW(const std::vector<double>& devWeights);
     void set_devMatrixW(const Matrix& devWeights);
     void set_devVectorB(const std::vector<double>& devBiases);
     void set_devVectorB(const Vector& devBiases);
 
 public:
-    BayesianLayer(unsigned int size): Layer(size){ m_gen.seed(std::time(nullptr));};
+    BayesianLayer(unsigned int size): Layer(size){};
     ~BayesianLayer();
     virtual void add_gradient(const std::pair<Matrix, Vector>& dL) override;
     virtual void generate_weights(const std::string& init_type) override;

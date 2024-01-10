@@ -23,12 +23,14 @@ LayerDeque::LayerDeque():
     m_outsize(0),
     m_step(0.5),
     m_adagrad_rate(0.),
+    m_dropout_rate(0.),
     m_regulization_rate(0.),
     m_viscosity_rate(0.)
 {
     m_pars_map["regulization"] = &m_regulization_rate;
     m_pars_map["viscosity"] = &m_viscosity_rate;
     m_pars_map["adagrad"] = &m_adagrad_rate;
+    m_pars_map["dropout"] = &m_dropout_rate;
 }
 
 LayerDeque::~LayerDeque()
@@ -95,6 +97,7 @@ void LayerDeque::generate_weights(const std::string& init_type)
 void LayerDeque::print(std::ostream& os) const
 {
     os << "adagrad_rate " << m_adagrad_rate << std::endl;
+    os << "dropout_rate " << m_dropout_rate << std::endl;
     os << "regulization_rate " << m_regulization_rate << std::endl;
     os << "viscosity_rate " << m_viscosity_rate << std::endl;
     for(const auto& pLayer: m_layers)
@@ -152,7 +155,32 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
         m_floss = [this](const Vector& real, const Vector& output){return (0.5 * ((output - real).array().pow(2)) + 2*(output-real).array().abs()) / m_outsize;};
         m_fploss = [this](const Vector& real, const Vector& output){return (output-real).unaryExpr([](double v){return v + 2*v/abs(v);}) / m_outsize;};
     }
-
+    else if (m_loss_type == "CORR")
+    {
+        m_floss = [this](const Vector& real, const Vector& output){
+            double alpha = 0.99;
+            static Vector ema_xy = Vector::Zero(real.size());
+            static Vector ema_x = Vector::Zero(real.size());
+            static Vector ema_y = Vector::Zero(real.size());
+            ema_xy = alpha * ema_xy.array() + (1-alpha) * (output-real).array()*real.array();
+            ema_x = alpha * ema_x + (1-alpha) * (output-real);
+            ema_y = alpha * ema_y + (1-alpha) * real;
+            return (ema_xy.array() - ema_x.array()*ema_y.array()) / m_outsize;
+        };
+        m_fploss = [this](const Vector& real, const Vector& output){
+            double alpha = 0.99;
+            static Vector ema_xy = Vector::Zero(real.size());
+            static Vector ema_x = Vector::Zero(real.size());
+            static Vector ema_y = Vector::Zero(real.size());
+            ema_xy = alpha * ema_xy.array() + (1-alpha) * (output-real).array()*real.array();
+            ema_x = alpha * ema_x + (1-alpha) * (output-real);
+            ema_y = alpha * ema_y + (1-alpha) * real;
+            Vector corr = (ema_xy.array() - ema_x.array()*ema_y.array()).unaryExpr([](double v){return v > 0? 1.: -1.;});
+            //std::cout << ema_xy - ema_x*ema_y << " " << ema_xy << " " << ema_x << " " << ema_y << std::endl;
+            Vector df = corr.array() * (1-alpha) * (real-ema_y).array() / m_outsize;
+            return df;
+        };
+    }
     else if (m_loss_type == "ABSO")
     {
         m_floss = [this](const Vector& real, const Vector& output){return (0.5 * ((output - real).array().pow(2) - 1).abs()) / m_outsize;};
@@ -239,7 +267,7 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     else if (m_loss_type == "GOOGLE")
     {
         double a = -200.;
-        double c =  1.;
+        double c =  2.;
         auto f =   [a, c](double x) {return abs(a-2.)/a * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2.) - 1.);};
         auto df =  [a, c](double x) {return  x/(c*c) * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2. - 1) );};
         m_floss =  [this, f](const Vector& real, const Vector& output) {return (output-real).unaryExpr(f) / m_outsize; };
@@ -252,6 +280,11 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
 void LayerDeque::set_adagrad_rate(double adagrad_rate)
 {
     m_adagrad_rate = adagrad_rate;
+}
+
+void LayerDeque::set_dropout_rate(double dropout_rate)
+{
+    m_dropout_rate = dropout_rate;
 }
 
 void LayerDeque::set_regulization_rate(double regulization_rate)
@@ -277,6 +310,10 @@ std::pair<double, double> LayerDeque::test(const std::vector<std::vector<double>
 
     if (weights.size() != output.size())
         throw std::invalid_argument("event weights size is not equal to output size of testing data"); // TODO: make an global Exception static class
+    
+    // Update parameters
+    for (auto &layer: m_layers)
+        layer->reset_layer(m_pars_map);
 
     double mean = 0.;
     for (unsigned int idx = 0; idx < input.size(); ++idx)
@@ -312,7 +349,7 @@ std::pair<double, double> LayerDeque::test(const std::vector<std::vector<double>
     }
     stddev = output.size() > 1? stddev / (output.size() - 1): 0;
 
-    return {sqrt(mean + get_regulization()), sqrt(stddev)};
+    return {mean + get_regulization(), sqrt(stddev)};
 }
 
 void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
@@ -355,8 +392,9 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
             for (unsigned idl = 0; idl < m_layers.size() - 1; ++idl)
             {
                 //Calculate summary layer gradient with likelihood and regulization
-                dL.at(idl).first /= (minibatch_size * batch_size);
-                dL.at(idl).second /= (minibatch_size * batch_size);
+                dL.at(idl).first *= 1./(minibatch_size * batch_size);
+                dL.at(idl).second *= 1./(minibatch_size * batch_size);
+                //BUG: Do not normalize on batch_size the regulirization
                 m_layers.at(idl)->add_gradient(dL.at(idl));
             }
         }
@@ -429,7 +467,6 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
 
         delta.array() *= dx.array();
     }
-
 
 
     for (int idx = m_layers.size()-2; idx > -1; --idx)

@@ -177,14 +177,21 @@ bool Network::init_from_file(const std::string& in_file_name, const std::string&
             fin >> rate;
             m_layer_deque.set_viscosity_rate(rate);
             continue;
-	}
+	    }
         if (data == "adagrad_rate")
         {
             double rate;
             fin >> rate;
             m_layer_deque.set_adagrad_rate(rate);
             continue;
-	}
+	    }
+        if (data == "dropout_rate")
+        {
+            double rate;
+            fin >> rate;
+            m_layer_deque.set_dropout_rate(rate);
+            continue;
+        }
         if (data == "input_transforms" || data == "output_transforms")
         {
             unsigned int ntransforms = (data == "input_transforms")? m_numb_input: m_numb_output;
@@ -365,7 +372,19 @@ double Network::test(const std::vector<std::vector<double>>& input, const std::v
 
     if (weights_size != output_size)
         throw Exception("size of event weights and output are not equal");
+
+    // Normalize input vectors
+    std::vector<std::vector<double>> transf_input(input.begin(), input.end());
+    std::for_each(transf_input.begin(), transf_input.end(),
+        [this](std::vector<double>& in_vars){transform_input(in_vars);
+    });
     
+    // Normalize output vectors
+    std::vector<std::vector<double>> transf_output(output.begin(), output.end());
+    std::for_each(transf_output.begin(), transf_output.end(),
+        [this](std::vector<double>& out_vars){transform_output(out_vars);
+    });
+
     return m_layer_deque.test(input, output, weights).first;
 }
 
@@ -395,6 +414,7 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
     if (batch_size > input.size() || batch_size == 0)
         throw Exception("batch size is larger then input size or iz zero");
         
+    // TODO: Make a special method for input transormation
     // Set config of input and output normalization transformation
     std::for_each(input.begin(), input.end(), [this](const std::vector<double>& vars){
         for(unsigned int idx = 0; idx < m_in_transf.size(); ++idx)
@@ -415,7 +435,6 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
         [this](std::vector<double>& in_vars){transform_input(in_vars);
     });
     
-
     // Normalize output vectors
     std::vector<std::vector<double>> transf_output(output.begin(), output.end());
     std::for_each(transf_output.begin(), transf_output.end(),
@@ -423,7 +442,7 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
     });
 
     // Normalize weights vector
-    // DONOT implemented
+    // DONOT implemented. Is it nessecary?
 
     std::vector<std::vector<double>> train_input(transf_input.begin(), transf_input.begin() + int(split_mode * input_size));
     std::vector<std::vector<double>> train_output(transf_output.begin(), transf_output.begin() + int(split_mode * output_size));
@@ -437,6 +456,7 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
     // Testing to fix initial state
     std::pair<double, double> epsilon = m_layer_deque.test(test_input, test_output, test_weights);
     pop(epsilon);
+    double amp = m_layer_deque.get_step(); // step amplitude
     for (int iep = 0; iep < nepoch; ++iep)
     {
         start = clock();
@@ -460,9 +480,9 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
         */
 
         // Stochastic descent
-        double period = 1*30.;
-        double amp = .005;
-        double step = amp / (m_nepoch + 1) ;//amp * 0.5 * (1. + cos(std::abs(m_nepoch / period - int(m_nepoch / period / M_PI) * M_PI )));
+        double period = 1*10.;
+        //double step = amp / (m_nepoch + 1);
+        double step = amp * 0.5 * (1. + cos(std::abs(m_nepoch / period - int(m_nepoch / period / M_PI) * M_PI )));
         step = step == 0? amp: step;
         m_layer_deque.set_step(step);
 
@@ -473,6 +493,7 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
         ++m_nepoch;
         end = clock();
         std::cout << "Training Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
+        std::cout << std::endl;
     }
 }
 
@@ -529,6 +550,7 @@ void Network::pop(std::pair<double, double> epsilon) const
     notebook["regulization_rate"] = m_layer_deque.get_regulization_rate();
     notebook["viscosity_rate"] = m_layer_deque.get_viscosity_rate();
     notebook["adagrad_rate"] = m_layer_deque.get_adagrad_rate();
+    notebook["dropout_rate"] = m_layer_deque.get_dropout_rate();
     
     m_spec_popfunc(notebook);
 }

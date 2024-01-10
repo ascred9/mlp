@@ -32,7 +32,8 @@ void draw_macro()
         tph->Draw("rec - simen:simen", "abs(rec - simen)<150");
     
     
-    c1->cd(2);
+    c1->cd(2)->Divide(2, 1);
+    c1->cd(2)->cd(1);
     if (flag)
         tph->Draw("(lxe+csi)/rec - simen>>h2(400)", "abs((lxe+csi)/rec - simen)<150");
     else
@@ -42,6 +43,12 @@ void draw_macro()
     gROOT->ProcessLine("h2->SetLineColor(kBlack)");
     gROOT->ProcessLine("h2->Fit(\"gausn\", \"\", \"\", -50, 50)");
     gROOT->ProcessLine("h2origin->Fit(\"gausn\", \"\", \"\", -50, 50)");
+
+    c1->cd(2)->cd(2);
+    if (flag)
+        tph->Draw("pow((lxe+csi)/rec - simen,2):simen", "abs((lxe+csi)/rec - simen)<150");
+    else
+        tph->Draw("pow(rec - simen,2):simen", "abs(rec - simen)<150");
     
     c1->cd(3)->Divide(1, 2);
     c1->cd(3)->cd(1);

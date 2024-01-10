@@ -22,6 +22,7 @@ Layer::Layer(unsigned int size):
     m_viscosity_rate(0.),
     m_adagrad_rate(0.)
 {
+    m_gen.seed(std::time(nullptr));
 }
 
 Layer::~Layer()
@@ -56,12 +57,18 @@ const Vector Layer::calculateXp(const Vector& inputZ) const
 
 const Matrix& Layer::get_matrixW() const
 {
-    return m_matrixW;
+    if (m_trainMode)
+        return m_tempMatrixW;
+    else
+        return m_matrixW;
 }
 
 const Vector& Layer::get_vectorB() const
 {
-    return m_vectorB;
+    if (m_trainMode)
+        return m_tempVectorB;
+    else
+        return m_vectorB;
 }
 
 const unsigned int& Layer::size() const
@@ -266,6 +273,7 @@ void Layer::reset_layer(const std::map<std::string, double*>& learning_pars)
     m_regulization_rate = *learning_pars.at("regulization");
     m_viscosity_rate = *learning_pars.at("viscosity");
     m_adagrad_rate = *learning_pars.at("adagrad");
+    m_dropout_rate = *learning_pars.at("dropout");
 
     if (m_gradW.size() == 0)
     {
@@ -282,11 +290,29 @@ void Layer::reset_layer(const std::map<std::string, double*>& learning_pars)
 
 void Layer::update()
 {
+    m_tempMatrixW = m_matrixW;
+    m_tempVectorB = m_vectorB;
+
+    if (m_dropout_rate == 0.)
+        return;
+
+    // Make an dropout
+    // Generate the dropout probabilty for each node 
+    for (int il=0; il < m_out_size; ++il)
+    {
+        double prob = m_uniform(m_gen);
+        if (prob > m_dropout_rate)
+            continue;
+
+        // Zeros nlayer column of matrix and vector
+        m_tempMatrixW.col(il).setZero();
+        m_tempVectorB.col(il).setZero();
+    }
 }
 
 void Layer::update_weights(double step)
 {
-    double ep = 1e-8;
+    double ep = m_adagrad_rate > 0. ? 1e-8 : 1.;
 
     // Update speed
     double speed_boost = 1.;
@@ -301,8 +327,11 @@ void Layer::update_weights(double step)
     if (m_n_iteration < 1./(1-m_adagrad_rate))
         memory_boost = 1./(1-m_adagrad_rate);
 
-    m_memoryW.array() += memory_boost * (1-m_adagrad_rate) * m_gradW.array().pow(2);
-    m_memoryB.array() += memory_boost * (1-m_adagrad_rate) * m_gradB.array().pow(2);
+    if (m_adagrad_rate > 0.)
+    {
+        m_memoryW.array() += memory_boost * (1-m_adagrad_rate) * m_gradW.array().pow(2);
+        m_memoryB.array() += memory_boost * (1-m_adagrad_rate) * m_gradB.array().pow(2);
+    }
 
     // Update weight matrix
     m_matrixW.array() -= step * m_speedW.array() /
@@ -316,8 +345,8 @@ void Layer::update_weights(double step)
     m_speedW *= m_viscosity_rate;
     m_speedB *= m_viscosity_rate;
 
-    // Decrease memory fot the next iteration
-    if (m_adagrad_rate > 1-4)
+    // Decrease memory for the next iteration
+    if (m_adagrad_rate > 0)
     {
         m_memoryW *= m_adagrad_rate;
         m_memoryB *= m_adagrad_rate;

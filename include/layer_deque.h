@@ -39,6 +39,7 @@ private:
     unsigned int m_outsize;
     double m_step;
     double m_adagrad_rate;
+    double m_dropout_rate;
     double m_regulization_rate;
     double m_viscosity_rate;
     std::map<std::string, double*> m_pars_map; // collect all rate to the one container
@@ -66,12 +67,14 @@ public:
     double get_regulization_rate() const {return m_regulization_rate;};
     double get_viscosity_rate() const {return m_viscosity_rate;};
     double get_adagrad_rate() const {return m_adagrad_rate;};
+    double get_dropout_rate() const {return m_dropout_rate;};
     void print(std::ostream& os) const;
     bool read_layer(std::istream& fin, int layer_id);
     void set_active_funcs(const std::vector<std::string>& active_funcs);
     void set_layers(const std::vector<std::vector<double>>& matrices, const std::vector<std::vector<double>>& biases); // first is vector of matrices with weights, second is bias vector
     void set_loss_func(const std::string& loss_type);
     void set_adagrad_rate(double adagrad_rate);
+    void set_dropout_rate(double dropout_rate);
     void set_regulization_rate(double regulization_rate);
     void set_viscosity_rate(double viscosity_rate);
     void set_step(const double step);
