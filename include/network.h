@@ -80,6 +80,8 @@ public:
 
     void set_spectator_popfunc(const std::function<void(std::map<std::string, std::any>)>& popfunc){ m_spec_popfunc = popfunc;}; // Specify implemetation for your containers
     void set_spectator_upfunc(std::function<void()>); // Specify implementation for your containers
+
+    const std::vector<unsigned int> get_topology() const {return m_topology;}
 };
 
 using NetworkPtr = std::unique_ptr<Network>;

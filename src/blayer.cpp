@@ -166,13 +166,13 @@ void BayesianLayer::update()
     std::vector<double> vW(m_size * m_out_size);
     std::generate(vW.begin(), vW.end(), [&]() {return m_gaus(m_gen);});
 
-    m_epsilonW = Eigen::Map<Matrix, Eigen::Aligned>(vW.data(), m_out_size, m_size).transpose();
+    m_epsilonW = Eigen::Map<Matrix, Eigen::Aligned>(vW.data(), m_size, m_out_size);
     m_tempMatrixW = m_matrixW.array()
         + m_epsilonW.array() * m_Wsigma(m_devMatrixW).array();
 
     // Generate random matrix epsilon for B and update tempMatrixB
     std::vector<double> vB(m_out_size);
-    std::generate(vB.begin(), vB.end(), std::bind(m_gaus, m_gen));
+    std::generate(vB.begin(), vB.end(), [&]() {return m_gaus(m_gen);});
 
     m_epsilonB = Eigen::Map<Vector, Eigen::Aligned>(vB.data(), m_out_size);
     m_tempVectorB = m_vectorB.array()

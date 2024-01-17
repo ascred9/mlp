@@ -1,6 +1,7 @@
 { 
     gROOT->LoadMacro("build/libmlp.so");
     gROOT->LoadMacro("cos_reg.cpp");
+    gROOT->LoadMacro("Drawer,cpp");
     gROOT->ProcessLine("process()");
 
     //gROOT->LoadMacro("regression_main.cpp");
