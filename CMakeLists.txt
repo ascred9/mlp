@@ -13,4 +13,4 @@ set(CMAKE_BUILD_TYPE "Release")
 
 include_directories(include)
 
-add_library(mlp SHARED src/network.cpp src/bnetwork.cpp src/layer.cpp src/blayer.cpp src/layer_deque.cpp src/transformation.cpp)
+add_library(mlp SHARED src/drawer.cpp src/network.cpp src/bnetwork.cpp src/layer.cpp src/blayer.cpp src/layer_deque.cpp src/transformation.cpp)

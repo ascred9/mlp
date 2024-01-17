@@ -8,9 +8,13 @@
 #include "include/network.h"
 #include "include/bnetwork.h"
 
+#include "TROOT.h"
+#include "TCanvas.h"
 #include "TFile.h"
 #include "TTree.h"
-#include "Drawer.cpp"
+#include "TGraph.h"
+
+#include "RootDrawer.cpp"
 
 int process()
 {
@@ -35,12 +39,10 @@ int process()
     std::uniform_real_distribution<> dis(-3.0, 3.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    Draw();
-
-    int Nepoch = 2;//32;//219;//2e3;
+    int Nepoch = 3;//32;//219;//2e3;
     int Nentries = 100000;
     int batch_size = 10;
-    int minibatch_size = 5;
+    int minibatch_size = 10;
     std::vector<std::vector<double>> in, out;
 
     int count = 0;
@@ -104,10 +106,28 @@ int process()
     }
     t->Write();
     tnet->Write();
+    outfile->Close();
     fout.close();
     end = clock();
     std::cout << "Processing Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
     net_ptr->print(std::cout);
+    DrawNet(net_ptr.get());
 
     return 0;
+}
+
+void DrawResult()
+{
+    TFile* f = new TFile("out.root");
+    TTree* t = (TTree*)f->Get("tph");
+
+    TCanvas* c = new TCanvas("c", "cos(x)", 900, 900);
+    c->Divide(1,2);
+    c->cd(1);
+    t->Draw("cs:x");
+    t->SetMarkerColor(kRed);
+    t->Draw("rec:x", "", "same");
+
+    c->cd(2);
+    t->Draw("cs-rec:x");
 }
