@@ -1,7 +1,7 @@
 { 
     gROOT->LoadMacro("build/libmlp.so");
     gROOT->LoadMacro("cos_reg.cpp");
-    gROOT->LoadMacro("RootDrawer.cpp");
+    //gROOT->LoadMacro("RootDrawer.cpp");
     gROOT->ProcessLine("process()");
     gROOT->ProcessLine("DrawResult()");
 

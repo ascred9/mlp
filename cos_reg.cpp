@@ -39,7 +39,7 @@ int process()
     std::uniform_real_distribution<> dis(-3.0, 3.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 3;//32;//219;//2e3;
+    int Nepoch = 1;//32;//219;//2e3;
     int Nentries = 100000;
     int batch_size = 10;
     int minibatch_size = 10;

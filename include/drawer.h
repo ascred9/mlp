@@ -12,46 +12,53 @@
 #pragma once
 
 #include <iostream>
+#include <list>
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "network.h"
 
-struct Primitive
+class Primitive
+{
+public:
+    float m_val;
+    virtual void print() const {std::cout << "Primitive" << std::endl;};
+    virtual void draw() const = 0;
+};
+
+
+class NodePrimitive: public Primitive
 {
 private:
-    static std::function<void(const Primitive& p)> m_draw_func;
+    static std::function<void(const NodePrimitive& p)> m_draw_func;
 public:
-    float val = 0;
-    virtual void print() const {std::cout << "Primitive" << std::endl;};
-    static void set_draw_func(const std::function<void(const Primitive& p)>& draw_func) {m_draw_func = draw_func;};
-    void draw() const {if (m_draw_func != nullptr) m_draw_func(*this);};
-};
-
-struct NodeDrawPrimitive: public Primitive
-{
-public:
-    float x, y;
-    float radii;
+    float m_x, m_y, m_r;
+    NodePrimitive(float x = 0, float y = 0, float r = 0, float v = 0);
     virtual void print() const override {std::cout << "Node" << std::endl;};
+    static void set_draw_func(const std::function<void(const NodePrimitive& p)>& draw_func) {m_draw_func = draw_func;};
+    virtual void draw() const override {if (m_draw_func != nullptr) m_draw_func(*this);};
 };
 
-struct ConnectionDrawPrimitive: public Primitive
+class ConnectionPrimitive: public Primitive
 {
+private:
+    static std::function<void(const ConnectionPrimitive& p)> m_draw_func;
 public:
-    NodeDrawPrimitive node_from;
-    NodeDrawPrimitive node_to;
+    NodePrimitive m_node_from;
+    NodePrimitive m_node_to;
+    ConnectionPrimitive(NodePrimitive from, NodePrimitive to, float v = 0);
     virtual void print() const override {std::cout << "Connection" << std::endl;};
+    static void set_draw_func(const std::function<void(const ConnectionPrimitive& p)>& draw_func) {m_draw_func = draw_func;};
+    virtual void draw() const override {if (m_draw_func != nullptr) m_draw_func(*this);};
 };
 
 class PrimitiveDrawer
 {
 private:
-    std::vector<Primitive> m_primitives;
+    std::list<std::shared_ptr<Primitive>> m_primitives;
 public:
     PrimitiveDrawer(const Network* net); //calculate node positions
-    const std::vector<Primitive> get_primitives() const {return m_primitives;};
+    const std::list<std::shared_ptr<Primitive>> get_primitives() const {return m_primitives;};
     void draw() const;
     void draw_event(const std::vector<float>& input); // calculate all node
 };
