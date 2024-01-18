@@ -2,8 +2,11 @@
 #include "include/network.h"
 
 #include "TCanvas.h"
+#include "TArrow.h"
 #include "TEllipse.h"
 #include "TText.h"
+#include "TColor.h"
+#include "TStyle.h"
 
 void drawNode(const NodePrimitive& n)
 {
@@ -16,13 +19,25 @@ void drawNode(const NodePrimitive& n)
 
 void drawConnection(const ConnectionPrimitive& c)
 {
-    std::cout << "Connection" << std::endl;
-    //const ConnectionDrawPrimitive connection = dynamic_cast<const ConnectionDrawPrimitive&>(p);
+    float arrow_size = 0.01;
+    int ncolors = TColor::GetNumberOfColors();
+    int color = gStyle->GetColorPalette((ncolors-1) * c.m_val);
+
+    float angle = atan2(c.m_y2-c.m_y1, c.m_x2-c.m_x1);
+    TArrow* arrow = new TArrow(c.m_x1+c.m_r1*cos(angle), c.m_y1+c.m_r1*sin(angle),
+                               c.m_x2-c.m_r2*cos(angle), c.m_y2-c.m_r2*sin(angle),
+                               arrow_size, "|>");
+    arrow->SetLineColor(color);
+    arrow->SetFillColor(color);
+    arrow->SetLineWidth(2);
+    arrow->Draw();
 }
 
 void DrawNet(Network* net)
 {
-    TCanvas* c = new TCanvas("cnet", "Neural Network", 900, 900);
+    gStyle->SetPalette(kThermometer);
+
+    TCanvas* c = new TCanvas("cnet", "Neural Network", 1200, 900);
     PrimitiveDrawer drawer(net);
     NodePrimitive::set_draw_func(std::function<void(const NodePrimitive& node)>(drawNode));
     ConnectionPrimitive::set_draw_func(std::function<void(const ConnectionPrimitive& connection)>(drawConnection));
