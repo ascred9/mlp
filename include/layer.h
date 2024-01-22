@@ -82,7 +82,7 @@ protected:
 public:
     Layer(unsigned int size);
     ~Layer();
-    virtual void add_gradient(const std::pair<Matrix, Vector>& dL);
+    virtual void add_gradient(const std::pair<Matrix, Vector>& dL, unsigned int batch_size);
     virtual void generate_weights(const std::string& init_type);
     virtual double get_regulization() const;
     virtual void print(std::ostream& os) const;

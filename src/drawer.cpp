@@ -83,15 +83,9 @@ PrimitiveDrawer::PrimitiveDrawer(const Network* net)
     // Copy and sort only connections
     m_order = m_primitives;
     m_order.sort([](auto p1, auto p2){
-        //TODO: Finish with Node. Currently, below method doesn't work
-        if (!(NodePrimitive*)p1.get() || !(NodePrimitive*)p2.get())
-        {
-            std::cout << "PP" << std::endl;
-            p1->print();
-            std::cout << std::endl;
-            p2->print();
+        if (std::dynamic_pointer_cast<NodePrimitive>(p1) || std::dynamic_pointer_cast<NodePrimitive>(p2))
             return true;
-        }
+
         return abs(p1->m_val-0.5) < abs(p2->m_val-0.5);
     });
 }

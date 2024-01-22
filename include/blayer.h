@@ -59,7 +59,7 @@ protected:
 public:
     BayesianLayer(unsigned int size): Layer(size){};
     ~BayesianLayer();
-    virtual void add_gradient(const std::pair<Matrix, Vector>& dL) override;
+    virtual void add_gradient(const std::pair<Matrix, Vector>& dL, unsigned int batch_size) override;
     virtual void generate_weights(const std::string& init_type) override;
     virtual double get_regulization() const override;
     virtual void print(std::ostream& os) const override;

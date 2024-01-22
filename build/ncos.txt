@@ -11,8 +11,8 @@ input_transforms
 output_transforms
 	normal 4 -1 1 0 0.5
 adagrad_rate 0.99
-dropout_rate 0.1
-regulization_rate 0
+dropout_rate 0
+regulization_rate 10
 viscosity_rate 0.9
 layer 
 [ -0.716651 -0.454031  0.592508  0.437037 -0.610398 -0.719735  0.481414  0.492074 -0.719913 -0.565608 ]

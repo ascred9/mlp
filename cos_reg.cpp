@@ -19,12 +19,13 @@
 int process()
 {
     BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
-    //net_ptr->create(1, 1, {10, 10}, "build/ncos.txt"); return 1;
+    //NetworkPtr net_ptr = std::make_unique<Network>();
+    //net_ptr->create(1, 1, {10, 10, 10}, "build/ncos2.txt"); return 1;
     //net_ptr->init_from_file("build/bcos.txt", "build/btcos.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
     //NetworkPtr net_ptr = std::make_unique<Network>();
     //net_ptr->create(5, 1, {4}, "build/network.txt"); return 1;
-    net_ptr->init_from_file("build/ncos.txt", "build/test.txt");
+    net_ptr->init_from_file("build/ncos2.txt", "build/test.txt");
 
     if (net_ptr == nullptr)
     {
@@ -39,10 +40,10 @@ int process()
     std::uniform_real_distribution<> dis(-3.0, 3.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 1;//32;//219;//2e3;
+    int Nepoch = 32;//219;//2e3;
     int Nentries = 100000;
     int batch_size = 10;
-    int minibatch_size = 10;
+    int minibatch_size = 5;
     std::vector<std::vector<double>> in, out;
 
     int count = 0;

@@ -392,10 +392,9 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
             for (unsigned idl = 0; idl < m_layers.size() - 1; ++idl)
             {
                 //Calculate summary layer gradient with likelihood and regulization
-                dL.at(idl).first *= 1./(minibatch_size * batch_size);
-                dL.at(idl).second *= 1./(minibatch_size * batch_size);
-                //BUG: Do not normalize on batch_size the regulirization
-                m_layers.at(idl)->add_gradient(dL.at(idl));
+                dL.at(idl).first *= 1./minibatch_size;
+                dL.at(idl).second *= 1./minibatch_size;
+                m_layers.at(idl)->add_gradient(dL.at(idl), batch_size);
             }
         }
 

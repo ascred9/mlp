@@ -210,14 +210,14 @@ double Layer::get_regulization() const
     return regulization;
 }
 
-void Layer::add_gradient(const std::pair<Matrix, Vector>& dL)
+void Layer::add_gradient(const std::pair<Matrix, Vector>& dL, unsigned int batch_size)
 {
-    m_gradW += dL.first;
-    m_gradB += dL.second;
+    m_gradW += dL.first * 1./ batch_size;
+    m_gradB += dL.second * 1./ batch_size;
     if (m_regulization_rate > 0.)
     {
-        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW();
-        m_gradB += pow(m_regulization_rate, -2.) * get_vectorB();
+        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW() * 1./ batch_size * pow(2., -m_n_iteration);
+        m_gradB += pow(m_regulization_rate, -2.) * get_vectorB() * 1./ batch_size * pow(2., -m_n_iteration);
     }
 }
 
@@ -274,6 +274,7 @@ void Layer::reset_layer(const std::map<std::string, double*>& learning_pars)
     m_viscosity_rate = *learning_pars.at("viscosity");
     m_adagrad_rate = *learning_pars.at("adagrad");
     m_dropout_rate = *learning_pars.at("dropout");
+    m_n_iteration = 0;
 
     if (m_gradW.size() == 0)
     {
@@ -298,7 +299,7 @@ void Layer::update()
 
     // Make an dropout
     // Generate the dropout probabilty for each node 
-    for (int il=0; il < m_out_size; ++il)
+    for (unsigned int il=0; il < m_out_size; ++il)
     {
         double prob = m_uniform(m_gen);
         if (prob > m_dropout_rate)
