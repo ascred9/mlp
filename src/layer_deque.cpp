@@ -302,7 +302,7 @@ void LayerDeque::set_step(const double step)
     m_step = step;
 }
 
-std::pair<double, double> LayerDeque::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+std::array<double, 3> LayerDeque::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                         const std::vector<std::vector<double>>& weights) const
 {
     if (input.size() != output.size())
@@ -349,7 +349,7 @@ std::pair<double, double> LayerDeque::test(const std::vector<std::vector<double>
     }
     stddev = output.size() > 1? stddev / (output.size() - 1): 0;
 
-    return {mean + get_regulization(), sqrt(stddev)};
+    return {mean + get_regulization(), sqrt(stddev), mean};
 }
 
 void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,

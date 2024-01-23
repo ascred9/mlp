@@ -385,7 +385,7 @@ double Network::test(const std::vector<std::vector<double>>& input, const std::v
         [this](std::vector<double>& out_vars){transform_output(out_vars);
     });
 
-    return m_layer_deque.test(input, output, weights).first;
+    return m_layer_deque.test(input, output, weights).at(0);
 }
 
 double Network::test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const
@@ -454,7 +454,7 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
 
     clock_t start, end;
     // Testing to fix initial state
-    std::pair<double, double> epsilon = m_layer_deque.test(test_input, test_output, test_weights);
+    std::array<double, 3> epsilon = m_layer_deque.test(test_input, test_output, test_weights);
     pop(epsilon);
     double amp = m_layer_deque.get_step(); // step amplitude
     for (int iep = 0; iep < nepoch; ++iep)
@@ -462,17 +462,17 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
         start = clock();
 
         // Testing before
-    	std::pair<double, double> epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
+    	std::array<double, 3> epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
 
         // Training
         m_layer_deque.train(train_input, train_output, train_weights, batch_size, minibatch_size);
 
         // Testing after
-	    std::pair<double, double> epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
+	    std::array<double, 3> epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
         pop(epsilon_after);
 
-        double reduce = std::abs(epsilon_after.first / epsilon_before.first);
-        double dreduce = std::abs(epsilon_after.second / epsilon_before.second);
+        double reduce = std::abs(epsilon_after.at(0) / epsilon_before.at(0));
+        double dreduce = std::abs(epsilon_after.at(1) / epsilon_before.at(1));
 
         /*// Fading descent
         double fading = std::exp(-reduce); // dependence on the previous result
@@ -487,8 +487,9 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
         m_layer_deque.set_step(step);
 
         std::cout << "Nepoch: " << m_nepoch << " step: " << step << std::endl;
-        std::cout << "Mean: " << epsilon_before.first << " -> " << epsilon_after.first << " : " << reduce << std::endl;
-        std::cout << "Stddev: " << epsilon_before.second << " -> " << epsilon_after.second << " : " << dreduce << std::endl;
+        std::cout << "Mean: " << epsilon_before.at(0) << " (" << epsilon_before.at(2) << ") -> ";
+        std::cout << "Mean: " << epsilon_after.at(0) << " (" << epsilon_after.at(2) << ") : " << reduce << std::endl;
+        std::cout << "Stddev: " << epsilon_before.at(1) << " -> " << epsilon_after.at(1)<< " : " << dreduce << std::endl;
 
         ++m_nepoch;
         end = clock();
@@ -533,7 +534,7 @@ void Network::reverse_transform_output(std::vector<double>& out_value) const
         out_value.at(idx) = m_out_transf.at(idx)->reverse_transform(out_value.at(idx));
 }
 
-void Network::pop(std::pair<double, double> epsilon) const
+void Network::pop(const std::array<double, 3>& epsilon) const
 {
     if (!m_spec_popfunc)
         return;
@@ -544,8 +545,8 @@ void Network::pop(std::pair<double, double> epsilon) const
     print(ss);
     notebook["struct"] = ss.str();
     notebook["nepoch"] = m_nepoch;
-    notebook["mean_loss"] = epsilon.first;
-    notebook["dev_loss"] = epsilon.second;
+    notebook["mean_loss"] = epsilon.at(0);
+    notebook["dev_loss"] = epsilon.at(1);
     notebook["step"] = m_layer_deque.get_step();
     notebook["regulization_rate"] = m_layer_deque.get_regulization_rate();
     notebook["viscosity_rate"] = m_layer_deque.get_viscosity_rate();

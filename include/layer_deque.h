@@ -78,7 +78,7 @@ public:
     void set_regulization_rate(double regulization_rate);
     void set_viscosity_rate(double viscosity_rate);
     void set_step(const double step);
-    std::pair<double, double> test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+    std::array<double, 3> test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                 const std::vector<std::vector<double>>& weights) const;
     void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                const std::vector<std::vector<double>>& weights, unsigned int batch_size = 1, unsigned int minibatch_size = 1);

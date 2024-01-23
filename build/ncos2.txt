@@ -3,16 +3,16 @@ numb_output 1
 deep 5
 nepoch 0
 loss_func GOOGLE
-step 0.05
+step 0.003
 topology 1 10 10 10 1 
-active_funcs linear sigmoid sigmoid sigmoid linear 
+active_funcs linear th th th linear 
 input_transforms
 	normal 4 -3.1416 3.1416 0 1.814
 output_transforms
 	normal 4 -1 1 0 0.5
 adagrad_rate 0.99
 dropout_rate 0
-regulization_rate 1
+regulization_rate 1000
 viscosity_rate 0.9
 layer 
 [  -0.346104  -0.585588   0.215672    0.08046  -0.721822  -0.168188   0.700155   0.463432 -0.0394225  0.0287518 ]

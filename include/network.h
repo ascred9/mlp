@@ -54,7 +54,7 @@ protected:
     // To save network in training steps
     std::function<void(const std::map<std::string, std::any>& notebook)> m_spec_popfunc;
     std::function<void()> m_spec_upgrade;
-    void pop(std::pair<double, double> epsilon) const;
+    void pop(const std::array<double, 3>& epsilon) const;
 
 public:
     Network();
