@@ -11,6 +11,8 @@
 #include "TFile.h"
 #include "TTree.h"
 
+#include "RootDrawer.cpp"
+
 int process(TString filename)
 {
     TFile* infile = new TFile(filename);
@@ -36,8 +38,9 @@ int process(TString filename)
     tph->SetBranchAddress("rho",	&rho);
 
     BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
+    //NetworkPtr net_ptr = std::make_unique<Network>();
     //net_ptr->create(5, 1, {5, 5}, "build/bnetwork.txt"); return 1;
-    net_ptr->init_from_file("build/bnetwork.txt", "build/bseam.txt");
+    net_ptr->init_from_file("build/bnetwork.txt", "build/btest_theta.txt");
     //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
     //NetworkPtr net_ptr = std::make_unique<Network>();
@@ -59,14 +62,14 @@ int process(TString filename)
 
     int Nepoch = 32; //2*94;
     int Nentries = tph->GetEntries();
-    int batch_size = 1;
-    int minibatch_size = 5;
+    int batch_size = 1000;
+    int minibatch_size = 2;
     double T = 1.;
     std::vector<std::vector<double>> in, out, weights;
 
-    TFile* wfile = new TFile("weights.root");
-    if (wfile->IsZombie())
-      std::cout << "file read error" << std::endl;
+    //TFile* wfile = new TFile("weights.root");
+    //if (wfile->IsZombie())
+    //  std::cout << "file read error" << std::endl;
 
     int count = 0;
 
@@ -75,8 +78,6 @@ int process(TString filename)
     {
         tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
-
-        //if ((lxe+csi)/simen < 0.8) continue;
 
         double n_th = abs(th - M_PI/2);
         in.push_back({lxe, csi, n_th, phi, rho});
@@ -167,6 +168,9 @@ int process(TString filename)
     end = clock();
     std::cout << "Processing Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
     net_ptr->print(std::cout);
+    outfile->Close();
+
+    DrawNet(net_ptr.get());
 
     return 0;
 }

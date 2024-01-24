@@ -49,14 +49,14 @@ PrimitiveDrawer::PrimitiveDrawer(const Network* net)
         r = r > 1./(2*v) ? 1./(2.5*v) : r;
 
     // Fill vector of primitives
-    float node_id = 0;
+    int node_id = -net->get_topology().front();
     for (unsigned int i = 0; i < net->get_topology().size(); i++)
     {
         unsigned int layer_size = net->get_topology().at(i);
         for (unsigned int j = 0; j < layer_size; j++)
         {
             float layer_w = 1./layer_size;
-            auto node_ptr = std::make_shared<NodePrimitive>(layer_w*(j+0.5), layer_h*(i+0.5), r, node_id == 0 ? 0.0 : m_biases.at(node_id-1));
+            auto node_ptr = std::make_shared<NodePrimitive>(layer_w*(j+0.5), layer_h*(i+0.5), r, node_id < 0 ? 0.0 : m_biases.at(node_id));
             node_id++;
             m_primitives.emplace_back(node_ptr);
         }

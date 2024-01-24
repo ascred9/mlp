@@ -18,8 +18,8 @@
 
 int process()
 {
-    BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
-    //NetworkPtr net_ptr = std::make_unique<Network>();
+    //BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
+    NetworkPtr net_ptr = std::make_unique<Network>();
     //net_ptr->create(1, 1, {10, 10, 10}, "build/ncos2.txt"); return 1;
     //net_ptr->init_from_file("build/bcos.txt", "build/btcos.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
@@ -38,7 +38,7 @@ int process()
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(-3.0, 3.0);
-    std::normal_distribution<> gaus(0., 100.0);
+    std::normal_distribution<> gaus(0., 1.);
 
     int Nepoch = 32;//219;//2e3;
     int Nentries = 100000;
@@ -52,7 +52,7 @@ int process()
     {
         double x = dis(gen);
         in.push_back({x});
-        out.push_back({cos(x)});
+        out.push_back({cos(x)+gaus(gen)});
     }
 
     TFile* outfile = new TFile("out.root", "recreate");
@@ -100,7 +100,7 @@ int process()
     for (int i = Nentries * 0.8; i < Nentries; ++i)
     {
         x = dis(gen);
-        cs = cos(x);
+        cs = cos(x)+gaus(gen);
         auto res = net_ptr->get_result({x});
         rec = res.at(0);
         t->Fill();
