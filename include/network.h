@@ -82,6 +82,8 @@ public:
     void set_spectator_upfunc(std::function<void()>); // Specify implementation for your containers
 
     const std::vector<unsigned int> get_topology() const {return m_topology;}
+    const std::vector<std::vector<double>> get_calculatedX(const std::vector<double>& input) const;
+    const std::vector<std::vector<double>> get_calculatedZ(const std::vector<double>& input) const;
 };
 
 using NetworkPtr = std::unique_ptr<Network>;

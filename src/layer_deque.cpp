@@ -141,6 +141,20 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
         m_floss = [this](const Vector& real, const Vector& output){return (0.5 * (output - real).array().pow(2))/ m_outsize;};
         m_fploss = [this](const Vector& real, const Vector& output){return ((output-real).array()) / m_outsize;};
     }
+    else if (m_loss_type == "ALS")
+    {
+        double A = 2.;
+        auto assym_sqr = [A](double a) {
+            return a > 0 ? 0.5*a*a : 0.5*a*a/A;
+        };
+        auto dassym_sqr = [A](double a) {
+            return a > 0 ? a : a/A;
+        };
+
+        m_floss = [this, assym_sqr](const Vector& real, const Vector& output){return (output - real).array().unaryExpr(assym_sqr)/ m_outsize;};
+        m_fploss = [this, dassym_sqr](const Vector& real, const Vector& output){return (output-real).array().unaryExpr(dassym_sqr) / m_outsize;};
+    }
+
     else if (m_loss_type == "LOG")
     {
         double l = 1.;
@@ -502,4 +516,42 @@ double LayerDeque::get_regulization() const
     for (const auto& pLayer: m_layers)
         regulization += pLayer->get_regulization();
     return regulization / m_outsize;
+}
+
+const std::vector<std::vector<double>> LayerDeque::get_calculatedX(const std::vector<double>& input) const
+{
+    if (m_layers.front()->size() != input.size())
+        throw std::invalid_argument("wrong input size, it is not equal to input layer size"); // TODO: make an global Exception static class
+
+    std::vector<std::vector<double>> res;
+
+    int size = input.size();
+    Vector tmpZ( std::move(Eigen::Map<const Vector, Eigen::Aligned>(input.data(), size)) );
+    Vector tmpX;
+    for (const auto& pLayer: m_layers)
+    {
+        tmpX = pLayer->calculateX(tmpZ);
+        res.push_back(std::vector<double>(tmpX.data(), tmpX.data() + tmpX.size()));
+        tmpZ = pLayer->calculate(tmpZ);
+    }
+
+    return res;
+}
+
+const std::vector<std::vector<double>> LayerDeque::get_calculatedZ(const std::vector<double>& input) const
+{
+    if (m_layers.front()->size() != input.size())
+    throw std::invalid_argument("wrong input size, it is not equal to input layer size"); // TODO: make an global Exception static class
+
+    std::vector<std::vector<double>> res;
+
+    int size = input.size();
+    Vector tmpZ( std::move(Eigen::Map<const Vector, Eigen::Aligned>(input.data(), size)) );
+    for (const auto& pLayer: m_layers)
+    {
+        tmpZ = pLayer->calculate(tmpZ);
+        res.push_back(std::vector<double>(tmpZ.data(), tmpZ.data() + tmpZ.size()));
+    }
+
+    return res;
 }

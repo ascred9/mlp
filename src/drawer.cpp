@@ -12,6 +12,13 @@
 
 #include "../include/drawer.h"
 
+std::string float_to_string(float v, int n = 2)
+{
+    std::string res = std::to_string(v);
+    auto pos = res.find(".");
+    return pos + n > res.size() ? res : res.substr(0, pos + n);
+}
+
 std::function<void(const NodePrimitive& p)> NodePrimitive::m_draw_func =
     [](const Primitive& p){std::cout << "Draw method isn't implemented! " << p.m_val << std::endl;};
 
@@ -21,6 +28,12 @@ NodePrimitive::NodePrimitive(float x, float y, float r, float v):
     m_r(r)
 {
     m_val = v;
+    m_text = "bias: " + float_to_string(v);
+}
+
+void NodePrimitive::set_pars(float X, float Z)
+{
+    m_text += "; Z:" + float_to_string(Z) + "; X: " + float_to_string(X);
 }
 
 std::function<void(const ConnectionPrimitive& p)> ConnectionPrimitive::m_draw_func =
@@ -88,6 +101,8 @@ PrimitiveDrawer::PrimitiveDrawer(const Network* net)
 
         return abs(p1->m_val-0.5) < abs(p2->m_val-0.5);
     });
+
+    m_net = net;
 }
 
 void PrimitiveDrawer::read_weights(const Network* net)
@@ -125,4 +140,30 @@ void PrimitiveDrawer::draw() const
 {
     for (const auto& primitive: m_order)
         primitive->draw();
+}
+
+void PrimitiveDrawer::draw_event(const std::vector<double>& input) const
+{
+    auto X = m_net->get_calculatedX(input);
+    auto Z = m_net->get_calculatedZ(input);
+
+    auto it = m_primitives.begin();
+    for (unsigned int i = 0; i < m_net->get_topology().size(); i++)
+    {
+        unsigned int layer_size = m_net->get_topology().at(i);
+        for (unsigned int j = 0; j < layer_size; j++)
+        {
+            if (i == 0) // Set only input layer
+            {
+                ((NodePrimitive*)it->get())->set_pars(X.at(i).at(j), X.at(i).at(j));
+                ++it;
+                continue;
+            }
+
+            ((NodePrimitive*)it->get())->set_pars(X.at(i).at(j), Z.at(i-1).at(j));
+            ++it;
+        }
+    }
+
+    draw();
 }

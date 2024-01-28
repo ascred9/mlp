@@ -12,8 +12,8 @@ void drawNode(const NodePrimitive& n)
 {
     TEllipse* circle = new TEllipse(n.m_x, n.m_y, n.m_r);
     circle->Draw();
-    TText* text = new TText(n.m_x-n.m_r*sqrt(3.)/2., n.m_y-n.m_r*0.5, Form("%.2f", n.m_val));
-    text->SetTextSize(n.m_r);
+    TText* text = new TText(n.m_x-n.m_r*sqrt(3.)/2., n.m_y, n.m_text.c_str());
+    text->SetTextSize(n.m_r/4.);
     text->Draw();
 }
 
@@ -33,7 +33,7 @@ void drawConnection(const ConnectionPrimitive& c)
     arrow->Draw();
 }
 
-void DrawNet(Network* net)
+void DrawNet(const Network* net)
 {
     gStyle->SetPalette(kThermometer);
 
@@ -42,4 +42,15 @@ void DrawNet(Network* net)
     NodePrimitive::set_draw_func(std::function<void(const NodePrimitive& node)>(drawNode));
     ConnectionPrimitive::set_draw_func(std::function<void(const ConnectionPrimitive& connection)>(drawConnection));
     drawer.draw();
+}
+
+void DrawEvent(Network* net, const std::vector<double>& input)
+{
+    gStyle->SetPalette(kThermometer);
+
+    //TCanvas* c = new TCanvas("cevent", "Neural Network Event", 1200, 900);
+    PrimitiveDrawer drawer(net);
+    //NodePrimitive::set_draw_func(std::function<void(const NodePrimitive& node)>(drawNode));
+    //ConnectionPrimitive::set_draw_func(std::function<void(const ConnectionPrimitive& connection)>(drawConnection));
+    drawer.draw_event(input);
 }

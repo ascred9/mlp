@@ -82,5 +82,8 @@ public:
                 const std::vector<std::vector<double>>& weights) const;
     void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                const std::vector<std::vector<double>>& weights, unsigned int batch_size = 1, unsigned int minibatch_size = 1);
+    
+    const std::vector<std::vector<double>> get_calculatedX(const std::vector<double>& input) const;
+    const std::vector<std::vector<double>> get_calculatedZ(const std::vector<double>& input) const;
 };
 

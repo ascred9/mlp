@@ -556,6 +556,20 @@ void Network::pop(const std::array<double, 3>& epsilon) const
     m_spec_popfunc(notebook);
 }
 
+const std::vector<std::vector<double>> Network::get_calculatedX(const std::vector<double>& input) const
+{
+    std::vector<double> transf_input(input.begin(), input.end());
+    transform_input(transf_input);
+    return m_layer_deque.get_calculatedX(transf_input);
+}
+
+const std::vector<std::vector<double>> Network::get_calculatedZ(const std::vector<double>& input) const
+{
+    std::vector<double> transf_input(input.begin(), input.end());
+    transform_input(transf_input);
+    return m_layer_deque.get_calculatedZ(transf_input);
+}
+
 // TODO: Make an event weighting (+weight normalization), assembly of networks, also and randomazing of data order.
 // TODO: Make a cost and test method. First with regulization and second without.
 

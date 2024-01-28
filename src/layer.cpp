@@ -91,7 +91,7 @@ void Layer::set_func(std::string name)
     if (name == "linear")
     {
         m_f = [](double x){return x;};
-        m_fp = [](double x){return 1;};
+        m_fp = [](double){return 1;};
     }
     else if (name == "sigmoid")
     {

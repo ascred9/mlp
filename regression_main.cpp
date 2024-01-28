@@ -37,8 +37,8 @@ int process(TString filename)
     tph->SetBranchAddress("phi",	&phi);
     tph->SetBranchAddress("rho",	&rho);
 
-    BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
-    //NetworkPtr net_ptr = std::make_unique<Network>();
+    //BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
+    NetworkPtr net_ptr = std::make_unique<Network>();
     //net_ptr->create(5, 1, {5, 5}, "build/bnetwork.txt"); return 1;
     net_ptr->init_from_file("build/bnetwork.txt", "build/btest_theta.txt");
     //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
@@ -60,11 +60,11 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 32; //2*94;
+    int Nepoch = 2*32; //2*94;
     int Nentries = tph->GetEntries();
     int batch_size = 1000;
     int minibatch_size = 2;
-    double T = 1.;
+    double T = .5;
     std::vector<std::vector<double>> in, out, weights;
 
     //TFile* wfile = new TFile("weights.root");
@@ -162,15 +162,19 @@ int process(TString filename)
         fout << simen << " " << rec << " " << lxe << " " << rec_lxe << " " << csi << " " << rec_csi << std::endl;
         t->Fill();
     }
+
+    net_ptr->print(std::cout);
+    DrawNet(net_ptr.get());
+
+    tph->GetEntry(999);
+    DrawEvent(net_ptr.get(), {lxe, csi, abs(th - M_PI/2), phi, rho});
+
     t->Write();
     tnet->Write();
     fout.close();
     end = clock();
     std::cout << "Processing Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
-    net_ptr->print(std::cout);
     outfile->Close();
-
-    DrawNet(net_ptr.get());
 
     return 0;
 }
