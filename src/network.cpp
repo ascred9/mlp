@@ -452,6 +452,17 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
     std::vector<std::vector<double>> test_output(transf_output.begin() + int(split_mode * output_size), transf_output.end());
     std::vector<std::vector<double>> test_weights(weights.begin() + int(split_mode * input_size), weights.end());
 
+    this->train_input(nepoch, train_input, train_output, train_weights,
+                               test_input, test_output, test_weights,
+                               batch_size, minibatch_size);
+}
+    
+void Network::train_input(const int nepoch, const std::vector<std::vector<double>>& train_input, const std::vector<std::vector<double>>& train_output,
+                          const std::vector<std::vector<double>>& train_weights,
+                          const std::vector<std::vector<double>>& test_input, const std::vector<std::vector<double>>& test_output,
+                          const std::vector<std::vector<double>>& test_weights,
+                          unsigned int batch_size, unsigned int minibatch_size)
+{
     clock_t start, end;
     // Testing to fix initial state
     std::array<double, 3> epsilon = m_layer_deque.test(test_input, test_output, test_weights);

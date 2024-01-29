@@ -62,8 +62,8 @@ int process(TString filename)
 
     int Nepoch = 2*32; //2*94;
     int Nentries = tph->GetEntries();
-    int batch_size = 1000;
-    int minibatch_size = 2;
+    int batch_size = 1;
+    int minibatch_size = 1;
     double T = .5;
     std::vector<std::vector<double>> in, out, weights;
 

@@ -2,18 +2,18 @@ numb_input 5
 numb_output 1
 deep 4
 nepoch 0
-loss_func LQ
-step 0.1
+loss_func GOOGLE
+step 0.01
 topology 5 5 5 1 
 active_funcs linear th th linear 
 input_transforms
 	normal 4 0 900 434 148.8
 	normal 4 0 1000 254.5 152.5
-	normal 4 0 1.571 0.3702 0.2225
-	normal 4 0 6.285 3.162 1.817
+	linear 2 0 1.571
+	linear 2 0 6.285
 	normal 4 37 51 39.96 2.85
 output_transforms
-	normal 4 700 800 750 30
+	linear 2 700 800
 adagrad_rate 0.99
 dropout_rate 0
 regulization_rate 0

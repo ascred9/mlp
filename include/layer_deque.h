@@ -49,7 +49,6 @@ private:
 
     std::vector<std::pair<Matrix, Vector>> get_gradient(const std::vector<double>& input, const std::vector<double>& output,
                                                         const std::vector<double>& weights) const;
-    std::vector<std::pair<Matrix, Vector>> get_gradient_reg(const std::vector<double>& weights) const;
     double get_regulization() const;
 public:
     LayerDeque();

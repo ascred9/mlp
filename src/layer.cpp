@@ -208,6 +208,8 @@ double Layer::get_regulization() const
     regulization += m_vectorB.array().pow(2).sum();
     regulization *= pow(m_regulization_rate, -2) * 0.5;
     return regulization;
+
+    //TODO: What if to the sqr of weights add the sqrt of weight's gradient?
 }
 
 void Layer::add_gradient(const std::pair<Matrix, Vector>& dL, unsigned int batch_size)
