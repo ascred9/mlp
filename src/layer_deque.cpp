@@ -19,6 +19,9 @@ void LayerDeque::add_layers<Layer>(std::vector<unsigned int> topology);
 template
 void LayerDeque::add_layers<BayesianLayer>(std::vector<unsigned int> topology);
 
+template
+void LayerDeque::add_layers<GradientLayer>(std::vector<unsigned int> topology);
+
 LayerDeque::LayerDeque():
     m_outsize(0),
     m_step(0.5),
@@ -282,7 +285,7 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     else if (m_loss_type == "GOOGLE")
     {
         double a = -200.;
-        double c =  2.;
+        double c =  1.;
         double A = 1.;
         auto f =   [a, c, A](double x) {return A*abs(a-2.)/a * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2.) - 1.);};
         auto df =  [a, c, A](double x) {return  A*x/(c*c) * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2. - 1) );};

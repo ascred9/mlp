@@ -27,6 +27,7 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 
 #include "layer.h"
 #include "blayer.h"
+#include "glayer.h"
 
 
 class LayerDeque

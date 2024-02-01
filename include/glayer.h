@@ -27,13 +27,13 @@ protected:
     Vector m_prevVectorB;
     Matrix m_prevGradW;
     Vector m_prevGradB;
+    int m_minibatch_count = 0;
+    double m_diff_step = 1e-5;
+    double m_dregulization_rate = 3e-5;
 
 public:
     GradientLayer(unsigned int size): Layer(size){};
     ~GradientLayer();
     virtual void add_gradient(const std::pair<Matrix, Vector>& dL, unsigned int batch_size) override;
-    virtual double get_regulization() const override;
-    virtual void reset_layer(const std::map<std::string, double*>& learning_pars) override;
-    virtual void update() override;
     virtual void update_weights(double step) override;
 };
