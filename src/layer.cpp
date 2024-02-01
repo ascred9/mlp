@@ -209,7 +209,8 @@ double Layer::get_regulization() const
     regulization *= pow(m_regulization_rate, -2) * 0.5;
     return regulization;
 
-    //TODO: What if to the sqr of weights add the sqrt of weight's gradient?
+    // BUG: in test method regulization is very large, but inside of gradient it is too small.
+    // In a result, almost no influence on gradient -> minimum searching!
 }
 
 void Layer::add_gradient(const std::pair<Matrix, Vector>& dL, unsigned int batch_size)

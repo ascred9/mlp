@@ -433,6 +433,53 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
     set_trainMode(false);
 }
 
+Vector LayerDeque::train_event(const std::vector<double>& input, const std::vector<double>& output)
+{
+    if (input.size() != output.size())
+        throw std::invalid_argument("input size is not equal to output size of training data"); // TODO: make an global Exception static class
+
+    auto set_trainMode = [this] (bool flag)
+    {
+        for (auto &layer: m_layers)
+        {
+            layer->m_trainMode = flag;
+            layer->reset_layer(m_pars_map);
+        }
+    };
+
+    set_trainMode(true);
+
+    // Calculate gradients and update weights
+    if (m_layers.front()->size() != input.size())
+        throw std::invalid_argument("wrong input size"); // TODO: make an global Exception static class
+
+    if (m_layers.back()->size() != output.size())
+        throw std::invalid_argument("wrong output size"); // TODO: make an global Exception static class
+  
+    // Calculate for one event a minibatch gradient 
+    for (auto& layer: m_layers)
+        layer->update();
+
+    std::vector<double> weights(output.size(), 1.);
+
+    std::vector<std::pair<Matrix, Vector>> dL( std::move(get_gradient(input, output, weights)) );
+
+    for (unsigned idl = 0; idl < m_layers.size() - 1; ++idl)
+    {
+        //Calculate summary layer gradient with likelihood and regulization
+        m_layers.at(idl)->add_gradient(dL.at(idl), 1);
+    }
+
+    for (unsigned int idl = 0; idl < m_layers.size() - 1; ++idl)
+    {
+        m_layers.at(idl)->update_weights(m_step);
+    }
+
+    set_trainMode(false);
+
+    return dL.front().second * m_layers.front()->get_matrixW().transpose();
+}
+
 std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vector<double>& input, const std::vector<double>& output,
                                                                 const std::vector<double>& weights) const
 {
@@ -448,7 +495,7 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
     int weights_size = weights.size();
     const Vector W = Eigen::Map<const Vector, Eigen::Aligned>(weights.data(), weights_size);
 
-    // Xi = f(sum( Wij * Zj) + Bi), i - output neuron, j - input neurons
+    // Xi = f(Zi) = f(sum(Wij*xj) + Bi), i - output neuron, j - input neurons
     std::vector<std::shared_ptr<const Vector>> pZ_layers; // (Z0, Z1, Z2, ..., Zn), this vector has size m_layers.size()
     pZ_layers.reserve(m_layers.size());
     std::vector<std::shared_ptr<const Vector>> pX_layers; // (X0, X1, X2, ..., Xn), this vector has size m_layers.size()

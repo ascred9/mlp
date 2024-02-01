@@ -82,7 +82,8 @@ public:
     double test(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output) const;
     void train(const int nepoch, const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                const std::vector<std::vector<double>>& weights, unsigned int batch_size = 1, unsigned int minibatch_size = 1, double split_mode = 0.5); // split mode is in [0, 1]
-    void train(const int nepoch, const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output, unsigned int batch_size = 1, unsigned int minibatch_size = 1, double split_mode = 0.5); // split mode is in [0, 1]
+    void train(const int nepoch, const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
+               unsigned int batch_size = 1, unsigned int minibatch_size = 1, double split_mode = 0.5); // split mode is in [0, 1]
 
     void set_spectator_popfunc(const std::function<void(std::map<std::string, std::any>)>& popfunc){ m_spec_popfunc = popfunc;}; // Specify implemetation for your containers
     void set_spectator_upfunc(std::function<void()>); // Specify implementation for your containers
