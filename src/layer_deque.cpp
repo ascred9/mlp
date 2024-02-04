@@ -68,6 +68,7 @@ LayerDeque::add_layers(std::vector<unsigned int> topology)
     }
     m_outsize = m_layers.back()->size();
     m_ema = Vector::Zero(m_outsize);
+    m_addition_gradient = Vector::Zero(m_outsize);
 }
 
 std::vector<double> LayerDeque::calculate(const std::vector<double>& input) const
@@ -435,9 +436,6 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
 
 Vector LayerDeque::train_event(const std::vector<double>& input, const std::vector<double>& output)
 {
-    if (input.size() != output.size())
-        throw std::invalid_argument("input size is not equal to output size of training data"); // TODO: make an global Exception static class
-
     auto set_trainMode = [this] (bool flag)
     {
         for (auto &layer: m_layers)
@@ -447,14 +445,14 @@ Vector LayerDeque::train_event(const std::vector<double>& input, const std::vect
         }
     };
 
-    set_trainMode(true);
-
     // Calculate gradients and update weights
     if (m_layers.front()->size() != input.size())
         throw std::invalid_argument("wrong input size"); // TODO: make an global Exception static class
 
     if (m_layers.back()->size() != output.size())
         throw std::invalid_argument("wrong output size"); // TODO: make an global Exception static class
+
+    set_trainMode(true);
   
     // Calculate for one event a minibatch gradient 
     for (auto& layer: m_layers)
@@ -517,7 +515,7 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
         }
     }
 
-    Vector df = m_fploss(Y, *pX_layers.back());
+    Vector df = m_fploss(Y, *pX_layers.back()) + m_addition_gradient;
     Vector delta = (W.array() * df.array()) *
         m_layers.back()->calculateXp( *pZ_layers.back() ).array();
 

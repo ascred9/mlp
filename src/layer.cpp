@@ -140,6 +140,11 @@ void Layer::set_func(std::string name)
         m_f = [](double x){return (std::sqrt(std::pow(x, 2) + 1.) - 1.)/2.+ x;};
         m_fp = [](double x){return x/(2*std::sqrt(std::pow(x, 2) + 1.)) + 1.;};
     }
+    else if (name == "relu")
+    {
+        m_f = [](double x){return x > 0 ? x : 0.;};
+        m_fp = [](double x){return x > 0 ? 1.: 0.;};
+    }
     else if (name == "logic")
     {
         m_f = [](double x){return x>0? 1: 0;}; // actually, x<0? 0: 1;
@@ -219,8 +224,8 @@ void Layer::add_gradient(const std::pair<Matrix, Vector>& dL, unsigned int batch
     m_gradB += dL.second * 1./ batch_size;
     if (m_regulization_rate > 0.)
     {
-        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW() * 1./ batch_size * pow(2., -m_n_iteration);
-        m_gradB += pow(m_regulization_rate, -2.) * get_vectorB() * 1./ batch_size * pow(2., -m_n_iteration);
+        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW() * 1./ batch_size;// * pow(2., -m_n_iteration);
+        m_gradB += pow(m_regulization_rate, -2.) * get_vectorB() * 1./ batch_size;// * pow(2., -m_n_iteration);
     }
 }
 

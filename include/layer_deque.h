@@ -48,6 +48,8 @@ private:
     double m_alpha = 0;
     mutable Vector m_ema;
 
+    Vector m_addition_gradient;
+
     std::vector<std::pair<Matrix, Vector>> get_gradient(const std::vector<double>& input, const std::vector<double>& output,
                                                         const std::vector<double>& weights) const;
     double get_regulization() const;
@@ -83,6 +85,7 @@ public:
     void train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
                const std::vector<std::vector<double>>& weights, unsigned int batch_size = 1, unsigned int minibatch_size = 1);
     Vector train_event(const std::vector<double>& input, const std::vector<double>& output); // return Vector of dL/dx for this event, x is input
+    void set_addition_gradient(const Vector& addition_gradient) {m_addition_gradient = addition_gradient;};
     
     const std::vector<std::vector<double>> get_calculatedX(const std::vector<double>& input) const;
     const std::vector<std::vector<double>> get_calculatedZ(const std::vector<double>& input) const;

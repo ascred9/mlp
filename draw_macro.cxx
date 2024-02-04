@@ -69,4 +69,25 @@ void draw_macro()
         tph->Draw("(lxe+csi)/rec - simen:rho>>h4(30, 30, 200, 200)", "abs((lxe+csi)/rec - simen)<100", "lego");
     else
         tph->Draw("rec - simen:rho>>h4(30, 30, 200, 200)", "abs(rec - simen)<100", "lego");
+    
+    if (true)
+    {
+        TCanvas* c2 = new TCanvas("neuron_net2", "neuron net results", 900, 600);
+        c2->Divide(2, 3);
+        c2->cd(1);
+        tph->Draw("rr_lxe:lxe");
+        c2->cd(2);
+        tph->Draw("rr_lxe-lxe");
+        c2->cd(3);
+        tph->Draw("rr_csi:csi");
+        c2->cd(4);
+        tph->Draw("rr_csi-csi");
+        c2->cd(5);
+        tph->Draw("csi:lxe>>h3");
+        gROOT->ProcessLine("h3->SetMarkerColor(kRed)");
+        gROOT->ProcessLine("h3->Draw()");
+        tph->Draw("rr_csi:rr_lxe", "", "same");
+        c2->cd(6);
+        tph->Draw("rr_csi-csi:rr_lxe-lxe");
+    }
 }
