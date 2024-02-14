@@ -145,10 +145,21 @@ void Layer::set_func(std::string name)
         m_f = [](double x){return x > 0 ? x : 0.;};
         m_fp = [](double x){return x > 0 ? 1.: 0.;};
     }
+    else if (name == "lrelu")
+    {
+        m_f = [](double x){return x >= 0 ? x : 0.01*x;};
+        m_fp = [](double x){return x > 0 ? 1.: 0.01;};
+    }
     else if (name == "logic")
     {
         m_f = [](double x){return x>0? 1: 0;}; // actually, x<0? 0: 1;
         m_fp = [](double x){return x!=0? 0: std::numeric_limits<double>::infinity();};
+    }
+    else if (name == "gaus")
+    {
+        double sigma = 0.3;
+        m_f = [sigma](double x){return 1./(sqrt(2*3.1415)*sigma) * exp(-(x*x)/(2*sigma*sigma));};
+        m_fp = [sigma](double x){return -x/(sqrt(2*3.1415)*pow(sigma, 3)) * exp(-(x*x)/(2*sigma*sigma));};
     }
 }
 

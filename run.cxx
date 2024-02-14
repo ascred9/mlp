@@ -5,7 +5,7 @@
     //gROOT->ProcessLine("process()");
     //gROOT->ProcessLine("DrawResult()");
 
-    gROOT->LoadMacro("cregression_main.cpp");
+    gROOT->LoadMacro("regression_main.cpp");
     //gROOT->LoadMacro("classification_main.cpp");
     gROOT->ProcessLine("process(\"tph_data.root\")");
     gROOT->LoadMacro("draw_macro.cxx");

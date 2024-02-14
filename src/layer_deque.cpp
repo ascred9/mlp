@@ -183,7 +183,7 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
             ema_xy = alpha * ema_xy.array() + (1-alpha) * (output-real).array()*real.array();
             ema_x = alpha * ema_x + (1-alpha) * (output-real);
             ema_y = alpha * ema_y + (1-alpha) * real;
-            return (ema_xy.array() - ema_x.array()*ema_y.array()) / m_outsize;
+            return (ema_xy.array() - ema_x.array()*ema_y.array()).abs() / m_outsize;
         };
         m_fploss = [this](const Vector& real, const Vector& output){
             double alpha = 0.99;
@@ -282,7 +282,6 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
         m_fploss = [this, sign](const Vector& real, const Vector& output){return (output-real).unaryExpr(sign).array() / real.array()
             / m_outsize;};
     }
-    
     else if (m_loss_type == "GOOGLE")
     {
         double a = -200.;
@@ -292,6 +291,22 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
         auto df =  [a, c, A](double x) {return  A*x/(c*c) * ( pow(pow(x/c, 2) / abs(a-2.) + 1., a/2. - 1) );};
         m_floss =  [this, f](const Vector& real, const Vector& output) {return (output-real).unaryExpr(f) / m_outsize; };
         m_fploss = [this, df](const Vector& real, const Vector& output) {return (output-real).unaryExpr(df) / m_outsize; };
+    }
+    else if (m_loss_type == "LSC")
+    {
+        auto magn = [](double a) {return abs(a);};
+        m_floss = [this, magn](const Vector& real, const Vector& output){return 0.5*((output-real).array().pow(2) +
+                                                                                (output.unaryExpr(magn)-Vector::Constant(m_outsize, 1)).array().pow(2)) / m_outsize ;};
+        auto sign = [](double a) {
+            if ( a > 0)
+                return +1.;
+            else if ( a < 0)
+                return -1.;
+            else
+                return 0.;
+        };
+        m_fploss = [this, sign, magn](const Vector& real, const Vector& output){return ((output-real).array() + 
+                                            (output.unaryExpr(magn)-Vector::Constant(m_outsize, 1)).array()*output.array().unaryExpr(sign)) / m_outsize;};
     }
     else
         throw std::invalid_argument("this loss function isn't implemented");
