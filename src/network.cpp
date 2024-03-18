@@ -27,6 +27,8 @@ Network::Exception::Exception(const char* message)
 Network::Network():
     m_nepoch(0)
 {
+    if (m_usePCA)
+        m_pca = std::make_unique<PCA>();
 }
 
 Network::~Network()
@@ -49,12 +51,17 @@ void Network::add_in_transform(const std::string& type)
 void Network::add_in_transform(const std::string& type, const std::vector<double>& vars)
 {
     if (type == "linear")
-        m_in_transf.push_back(std::make_shared<LinearTransformation>(vars.front(), vars.back()));
+    {
+        auto pTransf = std::make_shared<LinearTransformation>(vars.front(), vars.back());
+        pTransf->set_config();
+        m_in_transf.push_back(pTransf);
+    }
     else if (type == "normal" && vars.size() == 4)
     {
         auto pTransf = std::make_shared<NormalTransformation>(vars.at(0), vars.at(1));
         pTransf->set_mean(vars.at(2));
         pTransf->set_dev(vars.at(3));
+        pTransf->set_config();
         m_in_transf.push_back(pTransf);
         
     }
@@ -353,6 +360,10 @@ std::vector<double> Network::get_result(const std::vector<double>& input) const
 {    
     std::vector<double> transf_input(input.begin(), input.end());
     transform_input(transf_input);
+
+    if (m_usePCA)
+        m_pca->transform(transf_input);
+
     std::vector<double> transf_output = m_layer_deque.calculate(transf_input);
     reverse_transform_output(transf_output);
     return transf_output;
@@ -447,10 +458,22 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
     std::vector<std::vector<double>> train_input(transf_input.begin(), transf_input.begin() + int(split_mode * input_size));
     std::vector<std::vector<double>> train_output(transf_output.begin(), transf_output.begin() + int(split_mode * output_size));
     std::vector<std::vector<double>> train_weights(weights.begin(), weights.begin() + int(split_mode * input_size));
-    
+
     std::vector<std::vector<double>> test_input(transf_input.begin() + int(split_mode * input_size), transf_input.end());
     std::vector<std::vector<double>> test_output(transf_output.begin() + int(split_mode * output_size), transf_output.end());
     std::vector<std::vector<double>> test_weights(weights.begin() + int(split_mode * input_size), weights.end());
+
+    if (m_usePCA)
+    {
+        m_pca->calculate(train_input);
+        std::for_each(train_input.begin(), train_input.end(),
+            [this](std::vector<double>& out_vars){m_pca->transform(out_vars);
+        });
+
+        std::for_each(test_input.begin(), test_input.end(),
+            [this](std::vector<double>& out_vars){m_pca->transform(out_vars);
+        });
+    }
 
     this->train_input(nepoch, train_input, train_output, train_weights,
                                test_input, test_output, test_weights,

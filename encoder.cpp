@@ -11,6 +11,7 @@
 
 #include "TFile.h"
 #include "TTree.h"
+#include "TH2F.h"
 
 #include "RootDrawer.cpp"
 
@@ -39,17 +40,8 @@ int process(TString filename)
     tph->SetBranchAddress("rho",	&rho);
 
     NetworkPtr net_ptr = std::make_unique<Network>();
-    //BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
-    //GradientNetworkPtr net_ptr = std::make_unique<GradientNetwork>();
-    //net_ptr->create(3, 1, {5, 10, 5}, "build/bnetwork.txt"); return 1;
-    //net_ptr->init_from_file("build/bnetwork.txt", "build/btest_theta.txt");
-    net_ptr->init_from_file("build/btest_theta3.txt", "build/btest_theta4.txt");
-    //net_ptr->init_from_file("build/btest_theta.txt", "build/btest_theta2.txt");
-    //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
-    //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
-    //NetworkPtr net_ptr = std::make_unique<Network>();
-    //net_ptr->create(5, 1, {10, 10, 10}, "build/network.txt"); return 1;
-    //net_ptr->init_from_file("build/network.txt", "build/test.txt");
+    //net_ptr->create(3, 3, {5, 5, 2, 5, 5}, "build/bnetwork.txt"); return 1;
+    net_ptr->init_from_file("build/bnetwork.txt", "build/btest_theta.txt");
 
     if (net_ptr == nullptr)
     {
@@ -64,9 +56,9 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 10;//3*32; //2*94;
+    int Nepoch = 3*32; //2*94;
     int Nentries = tph->GetEntries();
-    int batch_size = 1000;
+    int batch_size = 1;
     int minibatch_size = 1;
     double T = .5;
     std::vector<std::vector<double>> in, out, weights;
@@ -82,16 +74,15 @@ int process(TString filename)
     {
         tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
-        if (abs(simen-en)>100) continue;
 
         double n_th = abs(th - M_PI/2);
         //in.push_back({lxe, csi, n_th, phi, rho});
         in.push_back({lxe, csi, rho});
         //out.push_back({((lxe+csi)/simen)});
-        out.push_back({simen});
+        out.push_back({lxe, csi, rho});
 
         double weight = 1;//std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
-        weights.push_back({weight});
+        weights.push_back({weight, 1, 1});
 
         //double alpha = 0.814751 + 0.0502268 * 1. / (1. + std::exp((rho - 42.83) / 1.622));
         //double weight = std::exp(-abs(lxe + csi - alpha * simen) / T);
@@ -152,23 +143,18 @@ int process(TString filename)
     t->Branch("rec_lxe",&rec_lxe);
     t->Branch("rec_csi",&rec_csi);
     t->Branch("weight", &weight);
-    std::ofstream fout("result.txt");
     for (int i = Nentries * 0.8; i < Nentries; ++i)
     {
     	tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
-        if (abs(simen-en)>200) continue;
-
         double n_th = abs(th - M_PI/2);
 
         //auto res = net_ptr->get_result({lxe, csi, n_th, phi, rho});
         auto res = net_ptr->get_result({lxe, csi, rho});
-        rec = res.at(0);
-        rec_en = (lxe+csi)/rec;
-        rec_lxe = lxe/(lxe+csi) * rec;
-        rec_csi = csi/(lxe+csi) * rec;
+        rec_lxe = res.at(0);
+        rec_csi = res.at(1);
+        rec = res.at(2);
 
-        fout << simen << " " << rec << " " << lxe << " " << rec_lxe << " " << csi << " " << rec_csi << std::endl;
         t->Fill();
     }
 
@@ -181,10 +167,57 @@ int process(TString filename)
 
     t->Write();
     tnet->Write();
-    fout.close();
     end = clock();
     std::cout << "Processing Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
     outfile->Close();
 
+    return 0;
+}
+
+int pca()
+{
+    TFile* infile = new TFile("tph_data.root");
+    if (infile->IsZombie())
+    {
+        std::cout << "file read error" << std::endl;
+        return -1;
+    }
+    
+    TTree* tph = (TTree*)infile->Get("tph");
+    float simen;
+    int fc;
+    float en, en0, lxe, csi, bgo, th, phi, rho;
+    tph->SetBranchAddress("simen",	&simen);
+    tph->SetBranchAddress("fc",		&fc);
+    tph->SetBranchAddress("en",		&en);
+    tph->SetBranchAddress("en0",	&en0);
+    tph->SetBranchAddress("lxe",	&lxe);
+    tph->SetBranchAddress("csi",	&csi);
+    tph->SetBranchAddress("bgo",	&bgo);
+    tph->SetBranchAddress("th",		&th);
+    tph->SetBranchAddress("phi",	&phi);
+    tph->SetBranchAddress("rho",	&rho);
+
+    NetworkPtr net_ptr = std::make_unique<Network>();
+    net_ptr->init_from_file("build/encoder.txt", "build/encoder_test.txt");
+
+    TH2F* hist2d = new TH2F("hist2d", "x1:x2;x1;x2", 100, 0, 0, 100, 0, 0);
+
+    int Nentries = tph->GetEntries();
+    for (int i = Nentries * 0.8; i < Nentries; ++i)
+    {
+    	tph->GetEntry(i);
+        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
+        double n_th = abs(th - M_PI/2);
+
+        //auto res = net_ptr->get_result({lxe, csi, n_th, phi, rho});
+        auto res = net_ptr->get_result({lxe, csi, rho});
+        double x1 = res.at(0);
+        double x2 = res.at(1);
+
+        hist2d->Fill(x1, x2);
+    }
+
+    hist2d->Draw();
     return 0;
 }

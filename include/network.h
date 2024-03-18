@@ -23,6 +23,7 @@
 
 #include "layer_deque.h"
 #include "transformation.h"
+#include "pca.h"
 
 # define M_PI           3.14159265358979323846  /* pi */
 
@@ -41,6 +42,8 @@ protected:
     LayerDeque m_layer_deque;
     std::vector<TransformationPtr> m_in_transf;
     std::vector<TransformationPtr> m_out_transf;
+    std::unique_ptr<PCA> m_pca;
+    bool m_usePCA = false;
 
     virtual void add_layers();
     void add_in_transform(const std::string& type);

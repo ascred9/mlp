@@ -28,6 +28,7 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 #include "layer.h"
 #include "blayer.h"
 #include "glayer.h"
+#include "kde.h"
 
 
 class LayerDeque
@@ -53,6 +54,12 @@ private:
     std::vector<std::pair<Matrix, Vector>> get_gradient(const std::vector<double>& input, const std::vector<double>& output,
                                                         const std::vector<double>& weights) const;
     double get_regulization() const;
+
+    bool m_useKDE = true;
+    std::unique_ptr<KDE> m_kde;
+    void prepare_batch(const std::vector<std::vector<double>>& input,
+                       unsigned int id, unsigned int batch_size);
+
 public:
     LayerDeque();
 

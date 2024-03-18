@@ -34,6 +34,9 @@ LayerDeque::LayerDeque():
     m_pars_map["viscosity"] = &m_viscosity_rate;
     m_pars_map["adagrad"] = &m_adagrad_rate;
     m_pars_map["dropout"] = &m_dropout_rate;
+
+    if (m_useKDE)
+        m_kde = std::make_unique<KDE>();
 }
 
 LayerDeque::~LayerDeque()
@@ -96,6 +99,32 @@ void LayerDeque::generate_weights(const std::string& init_type)
     {
         layer->generate_weights(init_type);
     }
+}
+
+void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
+                               unsigned int idx, unsigned int batch_size)
+{
+    if (!m_useKDE)
+        return;
+    
+    if (idx % batch_size == 0)
+    {
+        for (auto &layer: m_layers)
+            layer->m_trainMode = false;
+
+        // Fill array
+        std::vector<std::vector<double>> reco(batch_size, std::vector<double>(m_outsize));
+        for (unsigned int i = idx; i < idx + batch_size; i++)
+            reco.push_back(calculate(input.at(i)));
+    
+        m_kde->recalculate(reco);
+    
+        for (auto &layer: m_layers)
+            layer->m_trainMode = true;
+    }
+
+    const double val = m_kde->get_val( idx % batch_size);
+    set_addition_gradient(Vector::Constant(1, m_outsize, val));
 }
 
 void LayerDeque::print(std::ostream& os) const
@@ -308,6 +337,41 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
         m_fploss = [this, sign, magn](const Vector& real, const Vector& output){return ((output-real).array() + 
                                             (output.unaryExpr(magn)-Vector::Constant(m_outsize, 1)).array()*output.array().unaryExpr(sign)) / m_outsize;};
     }
+    else if (m_loss_type == "HUBER")
+    {
+        double delta = 0.04;
+        auto huber = [delta](double a) {return abs(a) < delta ?  0.5*pow(a, 2) : delta * (abs(a) - delta);};
+        m_floss = [this, huber](const Vector& real, const Vector& output){return (output-real).unaryExpr(huber)/ m_outsize;};
+        auto dhuber = [delta](double a) {return abs(a) < delta ?  a : delta * abs(a) / a;};
+        m_fploss = [this, dhuber](const Vector& real, const Vector& output){return  (output-real).unaryExpr(dhuber) / m_outsize;};
+    }
+    else if (m_loss_type == "SMAE")
+    {
+        auto smae = [](double a) {return a * tanh(0.5*a);};
+        m_floss = [this, smae](const Vector& real, const Vector& output){return (output-real).unaryExpr(smae)/ m_outsize;};
+        auto dsmae = [](double a) {return tanh(0.5*a) + 0.5*a*1./pow(cosh(0.5*a), 2);};
+        m_fploss = [this, dsmae](const Vector& real, const Vector& output){return  (output-real).unaryExpr(dsmae) / m_outsize;};
+    }
+    else if (m_loss_type == "LETSGO")
+    {
+        const double amp = 1.;
+        const double alpha = 0.6;
+        m_floss = [this, amp, alpha](const Vector& real, const Vector& output){
+            auto smae = [](double a) {return a * tanh(0.5*a);};
+            static Vector ema = Vector::Zero(real.size());
+            ema = alpha * ema.array() + (1-alpha) * (output-real).array()*real.array();
+            return ( (output - real).array().unaryExpr(smae) + amp * ema.array().abs() ) / m_outsize;
+        };
+        m_fploss = [this, amp, alpha](const Vector& real, const Vector& output){
+            auto dsmae = [](double a) {return tanh(0.5*a) + 0.5*a*1./pow(cosh(0.5*a), 2);};
+            static Vector ema = Vector::Zero(real.size());
+            ema = alpha * ema.array() + (1-alpha) * (output-real).array() * real.array();
+            Vector sign = ema.array().unaryExpr([](double v){return v > 0? 1.: -1.;});
+            //std::cout << ema_xy - ema_x*ema_y << " " << ema_xy << " " << ema_x << " " << ema_y << std::endl;
+            Vector df = ( (output - real).array().unaryExpr(dsmae) + amp * sign.array() * (1-alpha) * real.array() ) / m_outsize;
+            return df;
+        };
+    }
     else
         throw std::invalid_argument("this loss function isn't implemented");
 }
@@ -415,6 +479,8 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
 
         if (m_layers.back()->size() != output.at(idx).size())
             throw std::invalid_argument("wrong output size"); // TODO: make an global Exception static class
+
+        prepare_batch(input, idx, batch_size);
   
         // Calculate for one event a minibatch gradient 
         for (unsigned int jdx = 0; jdx < minibatch_size; ++jdx)
