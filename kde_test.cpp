@@ -6,6 +6,7 @@
 #include "TGraph.h"
 #include "TMultiGraph.h"
 #include "TCanvas.h"
+#include "TLegend.h"
 
 #include "include/network.h"
 #include "include/kde.h"
@@ -40,8 +41,9 @@ int test_kde()
     std::vector<std::vector<double>> input;
     std::vector<double> sim;
     int N = tph->GetEntries();
+    int size = 1000;
     //for (int i = 0; i < 1000; ++i)
-    for (int i = 0; input.size() < 1000; i++)
+    for (int i = 0; input.size() < size; i++)
     {
         tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
@@ -74,11 +76,17 @@ int test_kde()
     graph_exp->SetName("gexp");
     TGraph* gr_dep = new TGraph();
     gr_dep->SetName("gdep");
+
+    TMultiGraph* mg2 = new TMultiGraph("mg2", "mg2");
     TGraph* gr_kde = new TGraph();
     gr_kde->SetName("gkde");
+    TGraph* gr_log = new TGraph();
+    gr_log->SetName("glog");
+    TGraph* gr_plog = new TGraph();
+    gr_plog->SetName("gplog");
 
     double KL = 0;
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < size; i++)
     {
         double rec = reco.at(i).front();
         graph_sim->AddPoint(rec, kde.m_expected_f(rec));
@@ -87,7 +95,9 @@ int test_kde()
         gr_dep->AddPoint(sim.at(i), rec - sim.at(i));
         hist_sim->Fill(sim.at(i));
         hist_exp->Fill(rec);
-        gr_kde->AddPoint(rec, kde.get_val(i));
+        gr_kde->AddPoint(rec, kde.get_gradient(i));
+        gr_log->AddPoint(rec, log(kde.m_f.at(i)/kde.m_expected_f(rec)));
+        gr_plog->AddPoint(rec, kde.m_f.at(i)*log(kde.m_f.at(i)/kde.m_expected_f(rec)));
     
         KL += log(kde.m_f.at(i)/kde.m_expected_f(rec));
     }
@@ -96,25 +106,49 @@ int test_kde()
 
     TCanvas* c = new TCanvas("c", "c", 900, 600);
     c->Divide(2, 2);
+    c->cd(1)->SetGrid();
     c->cd(1);
     graph_sim->SetMarkerColor(kBlue);
     graph_dsim->SetMarkerColor(kBlack);
     graph_exp->SetMarkerColor(kRed);
+    graph_sim->SetLineColor(kBlue);
+    graph_dsim->SetLineColor(kBlack);
+    graph_exp->SetLineColor(kRed);
     mg->Add(graph_sim, "AP");
     mg->Add(graph_dsim, "AP");
     mg->Add(graph_exp, "AP");
     mg->Draw("AP");
+    TLegend* legend1 = new TLegend(0.1, 0.7, 0.3, 0.9);
+    legend1->AddEntry(graph_sim, "smoothed sim", "l");
+    legend1->AddEntry(graph_dsim, "deriv sim", "l");
+    legend1->AddEntry(graph_exp, "reco", "l");
+    legend1->Draw();
 
+    c->cd(2)->SetGrid();
     c->cd(2);
     gr_kde->SetMarkerColor(kBlack);
-    gr_kde->Draw("AP");
+    gr_log->SetMarkerColor(kRed);
+    gr_plog->SetMarkerColor(kBlue);
+    gr_kde->SetLineColor(kBlack);
+    gr_log->SetLineColor(kRed);
+    gr_plog->SetLineColor(kBlue);
+    mg2->Add(gr_kde, "AP");
+    mg2->Add(gr_log, "AP");
+    mg2->Add(gr_plog, "AP");
+    mg2->Draw("AP");
+    TLegend* legend2 = new TLegend(0.1, 0.7, 0.3, 0.9);
+    legend2->AddEntry(gr_log, "ln(p(xi)/q(xi))", "l");
+    legend2->AddEntry(gr_kde, "dKL/dxi", "l");
+    legend2->AddEntry(gr_plog, "p * ln(p/q)", "l");
+    legend2->Draw();
 
     c->cd(3);
     hist_sim->SetLineColor(kBlue);
-    hist_sim->Draw();
     hist_exp->SetLineColor(kRed);
-    hist_exp->Draw("same");
+    hist_exp->Draw();
+    hist_sim->Draw("same");
 
+    c->cd(4)->SetGrid();
     c->cd(4);
     gr_dep->Draw("AP");
 

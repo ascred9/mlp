@@ -29,14 +29,13 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 
 class KDE
 {
-    std::vector<double> m_vals;
+    std::vector<double> m_grads;
     bool m_verbose = true;
 public:
     std::function<double(double)> m_expected_f, m_expected_df;
     std::vector<double> m_f;
     KDE();
     void recalculate(const std::vector<std::vector<double>>& reco);
-    const double get_val(unsigned int id) const {return m_vals.at(id);};
+    const double get_gradient(unsigned int id) const {return m_grads.at(id);};
     void set_expected_distrib(std::function<double(double)> f_expected) {m_expected_f = f_expected;};
-    void set_expected_dev_distrib(std::function<double(double)> df_expected) {m_expected_df = df_expected;};
 };

@@ -22,7 +22,7 @@ KDE::KDE()
 
 void KDE::recalculate(const std::vector<std::vector<double>>& reco)
 {
-    m_vals.clear();
+    m_grads.clear();
     m_f.clear();
 
     if (reco.size() < 2 && reco.at(0).size() != 1)
@@ -45,7 +45,6 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
 
     // Calculate h
     double h = pow(4. / (3.*reco.size()), 0.2) * dev;
-    
  
     // Creat gaus
     auto gaus = [h](double x, double y){ return 1. / sqrt(2 * M_PI) * exp(-0.5*pow((x - y)/h, 2)); };
@@ -55,23 +54,34 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
     for (auto it = reco.begin(); it != reco.end(); ++it)
     {
         double p = 0, q = m_expected_f(it->front());
-        double dp = 0, dq = m_expected_df(it->front());
         for (auto jt = reco.begin(); jt != reco.end(); ++jt)
         {
             p += gaus(jt->front(), it->front());
-            dp += dgaus(jt->front(), it->front());
         }
 
         p /= (h * reco.size());
-        dp /= (h * reco.size());
 
         m_f.push_back(p);
-
-        m_vals.push_back(dp/p - dq/q);
 
         kl += log(p/q);
     }
     kl /= reco.size();
+
+    for (int i = 0; i < reco.size(); ++i)
+    {
+        double grad = 0;
+        double xi = reco.at(i).front();
+        for (int j = 0; j < reco.size(); ++j)
+        {
+            double xj = reco.at(j).front();
+            double norm = 1./(sqrt(2*M_PI) * h) * exp(-0.5*pow((xi - xj)/h, 2));
+            grad += norm/m_f.at(j) * (xj - xi) * (1 + log(m_f.at(j) / m_expected_f(xj)));
+        }
+
+        grad /= (pow(h*reco.size(), 2));
+
+        m_grads.push_back(grad);
+    }
     
     if (m_verbose)
     {
