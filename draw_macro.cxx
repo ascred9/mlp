@@ -60,7 +60,8 @@ void draw_macro()
     c1->cd(3)->cd(2);
     tnet->Draw("mean_loss:nepoch", "nepoch>2", "L");
 
-    c1->cd(4);
+    c1->cd(4)->Divide(1, 2);
+    c1->cd(4)->cd(1);
     TPad* pad = new TPad("pad4", "pad4", 0, 0, 1, 1);
     pad->Draw();
     pad->cd();
@@ -69,6 +70,17 @@ void draw_macro()
         tph->Draw("(lxe+csi)/rec - simen:rho>>h4(30, 30, 200, 200)", "abs((lxe+csi)/rec - simen)<100", "lego");
     else
         tph->Draw("rec - simen:rho>>h4(30, 30, 200, 200)", "abs(rec - simen)<100", "lego");
+
+    c1->cd(4)->cd(2);
+    if (flag)
+    {
+        tph->Draw("(lxe+csi)/rec>>h5(700, 800, 100, 100)");
+    }
+    else
+    {
+        tph->Draw("rec>>h5(700, 800, 100, 100)");
+    }
+    tph->Draw("simen", "", "same");
     
     if (true)
     {

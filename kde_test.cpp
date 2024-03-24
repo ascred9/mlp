@@ -62,6 +62,7 @@ int test_kde()
     }
 
     KDE kde;
+    kde.set_verbose();
     kde.recalculate(reco);
 
     TH1F* hist_sim = new TH1F("hsim", "hsim", 100, -2, 2);

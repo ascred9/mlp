@@ -123,8 +123,8 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
             layer->m_trainMode = true;
     }
 
-    const double val = m_kde->get_gradient( idx % batch_size);
-    set_addition_gradient(Vector::Constant(1, m_outsize, 500*val));
+    const double val = 10000*m_kde->get_gradient( idx % batch_size);
+    set_addition_gradient(Vector::Constant(1, m_outsize, val));
 }
 
 void LayerDeque::print(std::ostream& os) const

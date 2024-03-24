@@ -47,19 +47,17 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
     double h = pow(4. / (3.*reco.size()), 0.2) * dev;
  
     // Creat gaus
-    auto gaus = [h](double x, double y){ return 1. / sqrt(2 * M_PI) * exp(-0.5*pow((x - y)/h, 2)); };
-    auto dgaus = [h](double x, double y){ return -1. / sqrt(2 * M_PI) * exp(-0.5*pow((x - y)/h, 2)) * (x-y)/pow(h, 2); };
+    auto gaus = [h](double x, double y){ return 1. / (sqrt(2 * M_PI) * h) * exp(-0.5*pow((x - y)/h, 2)); };
+    auto dgaus = [h](double x, double y){ return -1. / (sqrt(2 * M_PI) * h) * exp(-0.5*pow((x - y)/h, 2)) * (x-y)/pow(h, 2); };
 
-    double kl = 0;
+    double kl = 0, dkl = 0;
     for (auto it = reco.begin(); it != reco.end(); ++it)
     {
         double p = 0, q = m_expected_f(it->front());
         for (auto jt = reco.begin(); jt != reco.end(); ++jt)
-        {
-            p += gaus(jt->front(), it->front());
-        }
+            p += gaus(it->front(), jt->front());
 
-        p /= (h * reco.size());
+        p /= reco.size();
 
         m_f.push_back(p);
 
@@ -67,27 +65,29 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
     }
     kl /= reco.size();
 
-    for (int i = 0; i < reco.size(); ++i)
+    for (auto it = reco.begin(); it != reco.end(); ++it)
     {
-        double grad = 0;
-        double xi = reco.at(i).front();
-        for (int j = 0; j < reco.size(); ++j)
+        double q = m_expected_f(it->front());
+        double dq = m_expected_df(it->front());
+        double dp = 0, pi = m_f.at(std::distance(reco.begin(), it));
+        for (auto jt = reco.begin(); jt != reco.end(); ++jt)
         {
-            double xj = reco.at(j).front();
-            double norm = 1./(sqrt(2*M_PI) * h) * exp(-0.5*pow((xi - xj)/h, 2));
-            grad += norm/m_f.at(j) * (xj - xi) * (1 + log(m_f.at(j) / m_expected_f(xj)));
+            double pj = m_f.at(std::distance(reco.begin(), jt));
+            dp += dgaus(it->front(), jt->front()) * (1./pi + 1./pj); 
         }
+        dp /= reco.size();
 
-        grad /= (pow(h*reco.size(), 2));
+        m_grads.push_back(dp - dq/q);
 
-        m_grads.push_back(grad);
+        dkl += (dp - dq/q);
     }
-    
+
     if (m_verbose)
     {
         std::cout << "m: " << mean << std::endl;
         std::cout << "d: " << dev << std::endl;
         std::cout << "h: " << h << std::endl;
-        std::cout << "kl: " << kl << std::endl << std::endl;
+        std::cout << "kl: " << kl << std::endl;
+        std::cout << "dkl: " << dkl << std::endl << std::endl;
     }
 }
