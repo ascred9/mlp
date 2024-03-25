@@ -31,6 +31,7 @@ class KDE
 {
     std::vector<double> m_grads;
     bool m_verbose = false;
+    double m_h;
 public:
     std::function<double(double)> m_expected_f, m_expected_df;
     std::vector<double> m_f;

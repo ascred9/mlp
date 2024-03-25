@@ -82,7 +82,7 @@ void draw_macro()
     }
     tph->Draw("simen", "", "same");
     
-    if (true)
+    if (false)
     {
         TCanvas* c2 = new TCanvas("neuron_net2", "neuron net results", 900, 600);
         c2->Divide(2, 3);

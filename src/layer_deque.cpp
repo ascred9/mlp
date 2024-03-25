@@ -36,7 +36,10 @@ LayerDeque::LayerDeque():
     m_pars_map["dropout"] = &m_dropout_rate;
 
     if (m_useKDE)
+    {
         m_kde = std::make_unique<KDE>();
+        //m_kde->set_verbose();
+    }
 }
 
 LayerDeque::~LayerDeque()
@@ -123,7 +126,7 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
             layer->m_trainMode = true;
     }
 
-    const double val = 10000*m_kde->get_gradient( idx % batch_size);
+    const double val = m_kde->get_gradient( idx % batch_size);
     set_addition_gradient(Vector::Constant(1, m_outsize, val));
 }
 

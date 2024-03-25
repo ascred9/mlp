@@ -44,11 +44,11 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
     dev = sqrt(dev);
 
     // Calculate h
-    double h = pow(4. / (3.*reco.size()), 0.2) * dev;
+    m_h = pow(4. / (3.*reco.size()), 0.2) * dev;
  
-    // Creat gaus
-    auto gaus = [h](double x, double y){ return 1. / (sqrt(2 * M_PI) * h) * exp(-0.5*pow((x - y)/h, 2)); };
-    auto dgaus = [h](double x, double y){ return -1. / (sqrt(2 * M_PI) * h) * exp(-0.5*pow((x - y)/h, 2)) * (x-y)/pow(h, 2); };
+    // Create gaus
+    auto gaus = [&](double x, double y){ return 1. / (sqrt(2 * M_PI) * m_h) * exp(-0.5*pow((x - y)/m_h, 2)); };
+    auto dgaus = [&](double x, double y){ return -1. / (sqrt(2 * M_PI) * m_h) * exp(-0.5*pow((x - y)/m_h, 2)) * (x-y)/pow(m_h, 2); };
 
     double kl = 0, dkl = 0;
     for (auto it = reco.begin(); it != reco.end(); ++it)
@@ -69,11 +69,12 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
     {
         double q = m_expected_f(it->front());
         double dq = m_expected_df(it->front());
-        double dp = 0, pi = m_f.at(std::distance(reco.begin(), it));
+        double dp = 0;
         for (auto jt = reco.begin(); jt != reco.end(); ++jt)
         {
             double pj = m_f.at(std::distance(reco.begin(), jt));
-            dp += dgaus(it->front(), jt->front()) * (1./pi + 1./pj); 
+            double qj = m_expected_f(jt->front());
+            dp += dgaus(it->front(), jt->front()) / pj * (log(pj/qj) + 1); 
         }
         dp /= reco.size();
 
@@ -86,7 +87,7 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
     {
         std::cout << "m: " << mean << std::endl;
         std::cout << "d: " << dev << std::endl;
-        std::cout << "h: " << h << std::endl;
+        std::cout << "h: " << m_h << std::endl;
         std::cout << "kl: " << kl << std::endl;
         std::cout << "dkl: " << dkl << std::endl << std::endl;
     }
