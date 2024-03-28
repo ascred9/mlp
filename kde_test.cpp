@@ -41,7 +41,7 @@ int test_kde()
     std::vector<std::vector<double>> input;
     std::vector<double> sim;
     int N = tph->GetEntries();
-    int size = 1000;
+    int size = 2000;
     //for (int i = 0; i < 1000; ++i)
     for (int i = 0; input.size() < size; i++)
     {

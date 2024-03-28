@@ -116,7 +116,7 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
             layer->m_trainMode = false;
 
         // Fill array
-        std::vector<std::vector<double>> reco(batch_size, std::vector<double>(m_outsize));
+        std::vector<std::vector<double>> reco;//(batch_size, std::vector<double>(m_outsize));
         for (unsigned int i = idx; i < idx + batch_size; i++)
             reco.push_back(calculate(input.at(i)));
     
@@ -514,6 +514,9 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
                 break;
         }
     }
+    
+    if (m_useKDE)
+        std::cout << "KL: " << m_kde->get_kl() << " -> grad: " << m_kde->get_dkl() << std::endl;
 
     set_trainMode(false);
 }

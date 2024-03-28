@@ -32,12 +32,16 @@ class KDE
     std::vector<double> m_grads;
     bool m_verbose = false;
     double m_h;
+    double m_kl;
+    double m_dkl;
 public:
     std::function<double(double)> m_expected_f, m_expected_df;
     std::vector<double> m_f;
     KDE();
     void recalculate(const std::vector<std::vector<double>>& reco);
     double get_gradient(unsigned int id) const {return m_grads.at(id);};
+    double get_kl() {return m_kl;};
+    double get_dkl() {return m_dkl;};
     void set_expected_distrib(std::function<double(double)> f_expected) {m_expected_f = f_expected;};
     void set_verbose() {m_verbose = true;};
 };

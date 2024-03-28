@@ -50,7 +50,8 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
     auto gaus = [&](double x, double y){ return 1. / (sqrt(2 * M_PI) * m_h) * exp(-0.5*pow((x - y)/m_h, 2)); };
     auto dgaus = [&](double x, double y){ return -1. / (sqrt(2 * M_PI) * m_h) * exp(-0.5*pow((x - y)/m_h, 2)) * (x-y)/pow(m_h, 2); };
 
-    double kl = 0, dkl = 0;
+    m_kl = 0;
+    m_dkl = 0;
     for (auto it = reco.begin(); it != reco.end(); ++it)
     {
         double p = 0, q = m_expected_f(it->front());
@@ -61,14 +62,12 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
 
         m_f.push_back(p);
 
-        kl += log(p/q);
+        m_kl += log(p/q);
     }
-    kl /= reco.size();
+    m_kl /= reco.size();
 
     for (auto it = reco.begin(); it != reco.end(); ++it)
     {
-        double q = m_expected_f(it->front());
-        double dq = m_expected_df(it->front());
         double dp = 0;
         for (auto jt = reco.begin(); jt != reco.end(); ++jt)
         {
@@ -78,9 +77,9 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
         }
         dp /= reco.size();
 
-        m_grads.push_back(dp - dq/q);
+        m_grads.push_back(dp);
 
-        dkl += (dp - dq/q);
+        m_dkl += dp;
     }
 
     if (m_verbose)
@@ -88,7 +87,7 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
         std::cout << "m: " << mean << std::endl;
         std::cout << "d: " << dev << std::endl;
         std::cout << "h: " << m_h << std::endl;
-        std::cout << "kl: " << kl << std::endl;
-        std::cout << "dkl: " << dkl << std::endl << std::endl;
+        std::cout << "kl: " << m_kl << std::endl;
+        std::cout << "dkl: " << m_dkl << std::endl << std::endl;
     }
 }
