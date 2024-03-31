@@ -116,9 +116,11 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
             layer->m_trainMode = false;
 
         // Fill array
-        std::vector<std::vector<double>> reco;//(batch_size, std::vector<double>(m_outsize));
+        std::vector<std::vector<double>> reco;
         for (unsigned int i = idx; i < idx + batch_size; i++)
+        {
             reco.push_back(calculate(input.at(i)));
+        }
     
         m_kde->recalculate(reco);
     
@@ -126,7 +128,7 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
             layer->m_trainMode = true;
     }
 
-    const double val = m_kde->get_gradient( idx % batch_size);
+    const double val = 100000000*m_kde->get_gradient( idx % batch_size);
     set_addition_gradient(Vector::Constant(1, m_outsize, val));
 }
 
