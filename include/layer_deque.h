@@ -55,9 +55,15 @@ private:
                                                         const std::vector<double>& weights) const;
     double get_regulization() const;
 
-    bool m_useKDE = true;
+    bool m_useZeroSlope = true;
+    double numerator;
+    double denumerator;
+    int sign;
+
+    bool m_useKDE = false;
     std::unique_ptr<KDE> m_kde;
     void prepare_batch(const std::vector<std::vector<double>>& input,
+                       const std::vector<std::vector<double>>& output,
                        unsigned int id, unsigned int batch_size);
 
 public:

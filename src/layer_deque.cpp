@@ -105,31 +105,61 @@ void LayerDeque::generate_weights(const std::string& init_type)
 }
 
 void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
+                               const std::vector<std::vector<double>>& output,
                                unsigned int idx, unsigned int batch_size)
 {
-    if (!m_useKDE)
-        return;
-    
-    if (idx % batch_size == 0)
+    if (m_useKDE)
     {
-        for (auto &layer: m_layers)
-            layer->m_trainMode = false;
-
-        // Fill array
-        std::vector<std::vector<double>> reco;
-        for (unsigned int i = idx; i < idx + batch_size; i++)
+        if (idx % batch_size == 0)
         {
-            reco.push_back(calculate(input.at(i)));
+            for (auto &layer: m_layers)
+                layer->m_trainMode = false;
+
+            // Fill array
+            std::vector<std::vector<double>> reco;
+            for (unsigned int i = idx; i < idx + batch_size; i++)
+            {
+                reco.push_back(calculate(input.at(i)));
+            }
+    
+            m_kde->recalculate(reco);
+    
+            for (auto &layer: m_layers)
+                layer->m_trainMode = true;
         }
-    
-        m_kde->recalculate(reco);
-    
-        for (auto &layer: m_layers)
-            layer->m_trainMode = true;
+
+        //const double val = 100000000*m_kde->get_gradient( idx % batch_size);
+        const double val = 0.1*m_kde->get_gradient( idx % batch_size);
+        set_addition_gradient(Vector::Constant(1, m_outsize, val));
     }
 
-    const double val = 100000000*m_kde->get_gradient( idx % batch_size);
-    set_addition_gradient(Vector::Constant(1, m_outsize, val));
+    if (m_useZeroSlope)
+    {
+        if (idx % batch_size == 0)
+        {
+            for (auto &layer: m_layers)
+                layer->m_trainMode = false;
+
+            numerator = 0;
+            denumerator = 0;
+            for (unsigned int i = idx; i < idx + batch_size; i++)
+            {
+                double rec = calculate(input.at(i)).at(0);
+                double sim = output.at(i).at(0);
+                numerator += sim * (rec - sim);
+                denumerator += sim * sim;
+            }
+
+            sign = numerator > 0 ? 1 : -1;
+
+
+            for (auto &layer: m_layers)
+                layer->m_trainMode = true;
+        }
+
+        const double val = 400*sign / denumerator * output.at(idx).at(0);
+        set_addition_gradient(Vector::Constant(1, m_outsize, val));
+    }
 }
 
 void LayerDeque::print(std::ostream& os) const
@@ -485,7 +515,7 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
         if (m_layers.back()->size() != output.at(idx).size())
             throw std::invalid_argument("wrong output size"); // TODO: make an global Exception static class
 
-        prepare_batch(input, idx, batch_size);
+        prepare_batch(input, output, idx, batch_size);
   
         // Calculate for one event a minibatch gradient 
         for (unsigned int jdx = 0; jdx < minibatch_size; ++jdx)

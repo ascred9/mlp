@@ -38,13 +38,13 @@ int process(TString filename)
     tph->SetBranchAddress("phi",	&phi);
     tph->SetBranchAddress("rho",	&rho);
 
-    //NetworkPtr net_ptr = std::make_unique<Network>();
-    BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
+    NetworkPtr net_ptr = std::make_unique<Network>();
+    //BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
     //GradientNetworkPtr net_ptr = std::make_unique<GradientNetwork>();
     //net_ptr->create(5, 1, {5, 10, 5}, "build/bnetwork.txt"); return 1;
-    net_ptr->init_from_file("build/bnetwork_theta4.txt", "build/bnetwork_theta5.txt");
+    //net_ptr->init_from_file("build/bnetwork_theta4.txt", "build/bnetwork_theta5.txt");
     //net_ptr->init_from_file("build/bnetwork.txt", "build/btest_theta.txt");
-    //net_ptr->init_from_file("build/btest_theta6.txt", "build/btest_theta7.txt");
+    net_ptr->init_from_file("build/btest_theta8.txt", "build/btest_theta9.txt");
     //net_ptr->init_from_file("build/btest_theta.txt", "build/btest_theta2.txt");
     //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
@@ -65,7 +65,7 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 8;//32; //2*94;
+    int Nepoch = 3*32; //2*94;
     int Nentries = tph->GetEntries();
     int batch_size = 1000;
     int minibatch_size = 1;

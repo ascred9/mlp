@@ -1,7 +1,7 @@
 numb_input 3
 numb_output 1
 deep 5
-nepoch 202
+nepoch 0 
 loss_func HUBER
 step 0.01
 topology 3 5 10 5 1 
