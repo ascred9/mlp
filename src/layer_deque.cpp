@@ -157,7 +157,7 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
                 layer->m_trainMode = true;
         }
 
-        const double val = 400*sign / denumerator * output.at(idx).at(0);
+        const double val = 50*sign / denumerator * output.at(idx).at(0);
         set_addition_gradient(Vector::Constant(1, m_outsize, val));
     }
 }

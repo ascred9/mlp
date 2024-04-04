@@ -39,18 +39,8 @@ int process(TString filename)
     tph->SetBranchAddress("rho",	&rho);
 
     NetworkPtr net_ptr = std::make_unique<Network>();
-    //BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
-    //GradientNetworkPtr net_ptr = std::make_unique<GradientNetwork>();
-    //net_ptr->create(5, 1, {5, 10, 5}, "build/bnetwork.txt"); return 1;
-    //net_ptr->init_from_file("build/bnetwork_theta4.txt", "build/bnetwork_theta5.txt");
-    //net_ptr->init_from_file("build/bnetwork.txt", "build/btest_theta.txt");
-    net_ptr->init_from_file("build/btest_theta10.txt", "build/btest_theta11.txt");
-    //net_ptr->init_from_file("build/btest_theta.txt", "build/btest_theta2.txt");
-    //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
-    //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
-    //NetworkPtr net_ptr = std::make_unique<Network>();
+    net_ptr->init_from_file("build/net_experiment.txt", "build/net_experiment2.txt");
     //net_ptr->create(5, 1, {10, 10, 10}, "build/network.txt"); return 1;
-    //net_ptr->init_from_file("build/network.txt", "build/test.txt");
 
     if (net_ptr == nullptr)
     {
@@ -60,47 +50,33 @@ int process(TString filename)
 
     clock_t start, end;
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(-1.0, 1.0);
-    std::normal_distribution<> gaus(0., 100.0);
-
-    int Nepoch = 9*32; //2*94;
+    int Nepoch = 32;//18*32; //2*94;
     int Nentries = tph->GetEntries();
     int batch_size = 1000;
     int minibatch_size = 1;
-    double T = .5;
     std::vector<std::vector<double>> in, out, weights;
 
-    //TFile* wfile = new TFile("weights.root");
-    //if (wfile->IsZombie())
-    //  std::cout << "file read error" << std::endl;
-
     int count = 0;
+    
+    std::vector<int> indexes(Nentries);
+    std::iota(indexes.begin(), indexes.end(), 0);
+    std::shuffle(indexes.begin(), indexes.end(), std::mt19937 {std::random_device{}()});
 
-    std::map<int, double> max; // rho - key, max weight - value
     for (int i=0; i < Nentries * 0.8; i++)
     {
-        tph->GetEntry(i);
+        tph->GetEntry(indexes.at(i));
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
         if (abs(simen-en)>100) continue;
 
         double n_th = abs(th - M_PI/2);
-        //in.push_back({lxe, csi, n_th, phi, rho});
         in.push_back({lxe, csi, rho, n_th, phi});
-        //out.push_back({((lxe+csi)/simen)});
         out.push_back({simen});
 
-        double weight = 1;//std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
+        double weight = 1;
         weights.push_back({weight});
-
-        //double alpha = 0.814751 + 0.0502268 * 1. / (1. + std::exp((rho - 42.83) / 1.622));
-        //double weight = std::exp(-abs(lxe + csi - alpha * simen) / T);
-        //if (lxe + csi - alpha * simen < 0) // left tail has more events
-        //    weight = pow(weight, 1./2);
     }
 
-    TFile* outfile = new TFile("out.root", "recreate");
+    TFile* outfile = new TFile("out_experiment.root", "recreate");
     TTree* t = new TTree("tph", "tph");
 
     // Think about to shrink it
@@ -153,23 +129,20 @@ int process(TString filename)
     t->Branch("rec_lxe",&rec_lxe);
     t->Branch("rec_csi",&rec_csi);
     t->Branch("weight", &weight);
-    std::ofstream fout("result.txt");
     for (int i = Nentries * 0.8; i < Nentries; ++i)
     {
-    	tph->GetEntry(i);
+    	tph->GetEntry(indexes.at(i));
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
         if (abs(simen-en)>200) continue;
 
         double n_th = abs(th - M_PI/2);
 
-        //auto res = net_ptr->get_result({lxe, csi, n_th, phi, rho});
         auto res = net_ptr->get_result({lxe, csi, rho, n_th, phi});
         rec = res.at(0);
         rec_en = (lxe+csi)/rec;
         rec_lxe = lxe/(lxe+csi) * rec;
         rec_csi = csi/(lxe+csi) * rec;
 
-        fout << simen << " " << rec << " " << lxe << " " << rec_lxe << " " << csi << " " << rec_csi << std::endl;
         t->Fill();
     }
 
@@ -177,12 +150,10 @@ int process(TString filename)
     DrawNet(net_ptr.get());
 
     tph->GetEntry(999);
-    //DrawEvent(net_ptr.get(), {lxe, csi, abs(th - M_PI/2), phi, rho});
     DrawEvent(net_ptr.get(), {lxe, csi, rho, abs(th - M_PI/2), phi});
 
     t->Write();
     tnet->Write();
-    fout.close();
     end = clock();
     std::cout << "Processing Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
     outfile->Close();

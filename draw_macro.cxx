@@ -6,12 +6,12 @@
 
 #include <iostream>
 
-void draw_macro()
+void draw_macro(TString filename = "out.root")
 {
     bool flag = false;
     //bool flag = true;
 
-    TFile* infile = new TFile("out.root");
+    TFile* infile = new TFile(filename);
     if (infile->IsZombie())
     {
         std::cout << "file read error" << std::endl;
