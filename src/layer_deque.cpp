@@ -147,7 +147,6 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
                 double d = calculate(input.at(i)).at(0) - output.at(i).at(0);
                 delta.push_back(d);
                 sim.push_back(output.at(i).at(0));
-                //std::cout << output.at(i).at(0) << std::endl;
             }
 
             for (auto &layer: m_layers)
@@ -155,14 +154,14 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
 
             m_ls_data.push_back(LinearLS::calculateKB(sim, delta));
 
-            //for (int ipar = 0; ipar < input.at(0).size(); ipar++)
-            //{
-            //    std::vector<double> x;
-            //    for (unsigned int i = idx; i < idx + batch_size; i++)
-            //        x.push_back(input.at(i).at(ipar));
+            for (int ipar = 0; ipar < input.at(0).size(); ipar++)
+            {
+                std::vector<double> x;
+                for (unsigned int i = idx; i < idx + batch_size; i++)
+                    x.push_back(input.at(i).at(ipar));
 
-            //    m_ls_data.push_back(LinearLS::calculateKB(x, delta));
-            //}
+                m_ls_data.push_back(LinearLS::calculateKB(x, delta));
+            }
         }
 
         int n = output.size();
@@ -175,16 +174,17 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
         double grad_b = lambda * bsim * (1 - grad_k * sumXsim) / n;
         val += lambda*(grad_k + grad_b);
 
-        //for (int idata = 3; idata < m_ls_data.size(); idata++)
-        //{
-        //    double k = m_ls_data.at(idata).at(0);
-        //    double b = m_ls_data.at(idata).at(1);
-        //    double sumX = m_ls_data.at(idata).at(2);
-        //    double sumX2 = m_ls_data.at(idata).at(3);
+        // Do not touch lxe and csi energy
+        for (int idata = 1; idata < m_ls_data.size(); idata++)
+        {
+            double k = m_ls_data.at(idata).at(0);
+            double b = m_ls_data.at(idata).at(1);
+            double sumX = m_ls_data.at(idata).at(2);
+            double sumX2 = m_ls_data.at(idata).at(3);
 
-        //    val += lambda * (k > 0 ? 1. : -1.) * (n * input.at(idx).at(idata-1) - sumX) / (n * sumX2 - sumX * sumX);
-        //    val += lambda * (b > 0 ? 1. : -1.) * (sumX2 - sumX * input.at(idx).at(idata-1)) / (n * sumX2 - sumX * sumX);
-        //}
+            val += lambda * (k > 0 ? 1. : -1.) * (n * input.at(idx).at(idata-1) - sumX) / (n * sumX2 - sumX * sumX);
+            val += lambda * (b > 0 ? 1. : -1.) * (sumX2 - sumX * input.at(idx).at(idata-1)) / (n * sumX2 - sumX * sumX);
+        }
     }
 
     set_addition_gradient(Vector::Constant(1, m_outsize, val));
