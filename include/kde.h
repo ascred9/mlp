@@ -38,7 +38,7 @@ public:
     std::function<double(double)> m_expected_f, m_expected_df;
     std::vector<double> m_f;
     KDE();
-    void recalculate(const std::vector<std::vector<double>>& reco);
+    void recalculate(const std::vector<double>& reco);
     double get_gradient(unsigned int id) const {return m_grads.at(id);};
     double get_kl() {return m_kl;};
     double get_dkl() {return m_dkl;};

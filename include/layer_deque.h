@@ -29,6 +29,7 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 #include "blayer.h"
 #include "glayer.h"
 #include "kde.h"
+#include "linearLS.h"
 
 
 class LayerDeque
@@ -56,11 +57,9 @@ private:
     double get_regulization() const;
 
     bool m_useZeroSlope = true;
-    double numerator;
-    double denumerator;
-    int sign;
+    std::vector<std::array<double, 4>> m_ls_data;
 
-    bool m_useKDE = false;
+    bool m_useKDE = true;
     std::unique_ptr<KDE> m_kde;
     void prepare_batch(const std::vector<std::vector<double>>& input,
                        const std::vector<std::vector<double>>& output,

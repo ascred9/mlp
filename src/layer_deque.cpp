@@ -108,6 +108,7 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
                                const std::vector<std::vector<double>>& output,
                                unsigned int idx, unsigned int batch_size)
 {
+    double val = 0;
     if (m_useKDE)
     {
         if (idx % batch_size == 0)
@@ -116,10 +117,10 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
                 layer->m_trainMode = false;
 
             // Fill array
-            std::vector<std::vector<double>> reco;
+            std::vector<double> reco;
             for (unsigned int i = idx; i < idx + batch_size; i++)
             {
-                reco.push_back(calculate(input.at(i)));
+                reco.push_back(calculate(input.at(i)).at(0));// - output.at(i).at(0));
             }
     
             m_kde->recalculate(reco);
@@ -129,37 +130,64 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
         }
 
         //const double val = 100000000*m_kde->get_gradient( idx % batch_size);
-        const double val = 0.1*m_kde->get_gradient( idx % batch_size);
-        set_addition_gradient(Vector::Constant(1, m_outsize, val));
+        val += m_kde->get_gradient( idx % batch_size);
     }
 
     if (m_useZeroSlope)
     {
         if (idx % batch_size == 0)
         {
+            m_ls_data.clear();
             for (auto &layer: m_layers)
                 layer->m_trainMode = false;
 
-            numerator = 0;
-            denumerator = 0;
+            std::vector<double> delta, sim;
             for (unsigned int i = idx; i < idx + batch_size; i++)
             {
-                double rec = calculate(input.at(i)).at(0);
-                double sim = output.at(i).at(0);
-                numerator += sim * (rec - sim);
-                denumerator += sim * sim;
+                double d = calculate(input.at(i)).at(0) - output.at(i).at(0);
+                delta.push_back(d);
+                sim.push_back(output.at(i).at(0));
+                //std::cout << output.at(i).at(0) << std::endl;
             }
-
-            sign = numerator > 0 ? 1 : -1;
-
 
             for (auto &layer: m_layers)
                 layer->m_trainMode = true;
+
+            m_ls_data.push_back(LinearLS::calculateKB(sim, delta));
+
+            //for (int ipar = 0; ipar < input.at(0).size(); ipar++)
+            //{
+            //    std::vector<double> x;
+            //    for (unsigned int i = idx; i < idx + batch_size; i++)
+            //        x.push_back(input.at(i).at(ipar));
+
+            //    m_ls_data.push_back(LinearLS::calculateKB(x, delta));
+            //}
         }
 
-        const double val = 50*sign / denumerator * output.at(idx).at(0);
-        set_addition_gradient(Vector::Constant(1, m_outsize, val));
+        int n = output.size();
+        double lambda = 100;
+        double ksim = m_ls_data.at(0).at(0);
+        double bsim = m_ls_data.at(0).at(1);
+        double sumXsim = m_ls_data.at(0).at(2);
+        double sumX2sim = m_ls_data.at(0).at(3);
+        double grad_k = lambda * ksim * (n * output.at(idx).at(0) - sumXsim) / (n * sumX2sim - sumXsim * sumXsim);
+        double grad_b = lambda * bsim * (1 - grad_k * sumXsim) / n;
+        val += lambda*(grad_k + grad_b);
+
+        //for (int idata = 3; idata < m_ls_data.size(); idata++)
+        //{
+        //    double k = m_ls_data.at(idata).at(0);
+        //    double b = m_ls_data.at(idata).at(1);
+        //    double sumX = m_ls_data.at(idata).at(2);
+        //    double sumX2 = m_ls_data.at(idata).at(3);
+
+        //    val += lambda * (k > 0 ? 1. : -1.) * (n * input.at(idx).at(idata-1) - sumX) / (n * sumX2 - sumX * sumX);
+        //    val += lambda * (b > 0 ? 1. : -1.) * (sumX2 - sumX * input.at(idx).at(idata-1)) / (n * sumX2 - sumX * sumX);
+        //}
     }
+
+    set_addition_gradient(Vector::Constant(1, m_outsize, val));
 }
 
 void LayerDeque::print(std::ostream& os) const
@@ -550,6 +578,9 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
     if (m_useKDE)
         std::cout << "KL: " << m_kde->get_kl() << " -> grad: " << m_kde->get_dkl() << std::endl;
 
+    if (m_useZeroSlope)
+        std::cout << "k: " << m_ls_data.at(0).at(0) << ", b " << m_ls_data.at(0).at(1) << std::endl;
+
     set_trainMode(false);
 }
 
@@ -635,6 +666,7 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
     }
 
     Vector df = m_fploss(Y, *pX_layers.back()) + m_addition_gradient;
+    //Vector df = m_addition_gradient;
     Vector delta = (W.array() * df.array()) *
         m_layers.back()->calculateXp( *pZ_layers.back() ).array();
 

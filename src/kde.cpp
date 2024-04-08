@@ -17,28 +17,29 @@ KDE::KDE()
 {
     double sigma = 0.6;
     m_expected_f = [sigma](double x){return 0.25 * (std::erf((1-x)/(sqrt(2)*sigma)) + std::erf((1+x)/(sqrt(2)*sigma)));};
-    m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((-1-x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
+    //m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((-1-x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
+    //m_expected_f = [sigma](double x){return 1./(sqrt(2*M_PI)*sigma) * exp(-0.5*pow(x/sigma, 2));};
 }
 
-void KDE::recalculate(const std::vector<std::vector<double>>& reco)
+void KDE::recalculate(const std::vector<double>& reco)
 {
     m_grads.clear();
     m_f.clear();
 
-    if (reco.size() < 2 && reco.at(0).size() != 1)
-        throw std::invalid_argument("kde isn't implemented for size more than 1");
+    if (reco.size() == 0)
+        throw std::invalid_argument("kde isn't implemented for size less than 1");
 
     // Calculate mean
     double mean = 0;
     for (auto it = reco.begin(); it != reco.end(); ++it)
-        mean += it->front();
+        mean += *it;
     
     mean /= reco.size();
 
     // Calculate dev
     double dev = 0;
     for (auto it = reco.begin(); it != reco.end(); ++it)
-        dev += pow((it->front() - mean), 2);
+        dev += pow((*it - mean), 2);
 
     dev /= (reco.size() - 1);
     dev = sqrt(dev);
@@ -54,9 +55,9 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
     m_dkl = 0;
     for (auto it = reco.begin(); it != reco.end(); ++it)
     {
-        double p = 0, q = m_expected_f(it->front());
+        double p = 0, q = m_expected_f(*it);
         for (auto jt = reco.begin(); jt != reco.end(); ++jt)
-            p += gaus(it->front(), jt->front());
+            p += gaus(*it, *jt);
 
         p /= reco.size();
 
@@ -72,11 +73,11 @@ void KDE::recalculate(const std::vector<std::vector<double>>& reco)
         for (auto jt = reco.begin(); jt != reco.end(); ++jt)
         {
             double pj = m_f.at(std::distance(reco.begin(), jt));
-            double qj = m_expected_f(jt->front());
+            double qj = m_expected_f(*jt);
             if (qj == 0)
                 qj = 1e-7;
 
-            double part = dgaus(it->front(), jt->front()) / pj * (log(pj/qj) + 1); 
+            double part = dgaus(*it, *jt) / pj * (log(pj/qj) + 1); 
             dp += part;
         }
         dp /= reco.size();
