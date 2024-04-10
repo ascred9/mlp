@@ -62,19 +62,19 @@ int process(TString filename)
     std::iota(indexes.begin(), indexes.end(), 0);
     std::shuffle(indexes.begin(), indexes.end(), std::mt19937 {std::random_device{}()});
 
-    for (int i=0; i < Nentries * 0.8; i++)
-    {
-        tph->GetEntry(indexes.at(i));
-        if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
-        if (abs(simen-en)>100) continue;
+    //for (int i=0; i < Nentries * 0.8; i++)
+    //{
+    //    tph->GetEntry(indexes.at(i));
+    //    if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
+    //    if (abs(simen-en)>100) continue;
 
-        double n_th = abs(th - M_PI/2);
-        in.push_back({lxe, csi, rho, n_th, phi});
-        out.push_back({simen});
+    //    double n_th = abs(th - M_PI/2);
+    //    in.push_back({lxe, csi, rho, n_th, phi});
+    //    out.push_back({simen});
 
-        double weight = 1;
-        weights.push_back({weight});
-    }
+    //    double weight = 1;
+    //    weights.push_back({weight});
+    //}
 
     TFile* outfile = new TFile("out_experiment.root", "recreate");
     TTree* t = new TTree("tph", "tph");
@@ -109,7 +109,7 @@ int process(TString filename)
     net_ptr->set_spectator_popfunc(popfunc);
 
 
-    net_ptr->train(Nepoch, in, out, weights, batch_size, minibatch_size);
+    //net_ptr->train(Nepoch, in, out, weights, batch_size, minibatch_size);
     net_ptr->save();
 
     start = clock();
@@ -129,9 +129,11 @@ int process(TString filename)
     t->Branch("rec_lxe",&rec_lxe);
     t->Branch("rec_csi",&rec_csi);
     t->Branch("weight", &weight);
-    for (int i = Nentries * 0.8; i < Nentries; ++i)
+    //for (int i = Nentries * 0.8; i < Nentries; ++i)
+    for (int i = 0; i < Nentries; ++i)
     {
-    	tph->GetEntry(indexes.at(i));
+    	//tph->GetEntry(indexes.at(i));
+    	tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
         if (abs(simen-en)>200) continue;
 

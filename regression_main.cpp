@@ -65,7 +65,7 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 4*32; //2*94;
+    int Nepoch = 2;//4*32; //2*94;
     int Nentries = tph->GetEntries();
     int batch_size = 1000;
     int minibatch_size = 1;

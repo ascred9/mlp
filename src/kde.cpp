@@ -15,7 +15,7 @@
 
 KDE::KDE()
 {
-    double sigma = 0.6;
+    double sigma = 0.5;
     m_expected_f = [sigma](double x){return 0.25 * (std::erf((1-x)/(sqrt(2)*sigma)) + std::erf((1+x)/(sqrt(2)*sigma)));};
     //m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((-1-x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
     //m_expected_f = [sigma](double x){return 1./(sqrt(2*M_PI)*sigma) * exp(-0.5*pow(x/sigma, 2));};
@@ -56,9 +56,13 @@ void KDE::recalculate(const std::vector<double>& reco)
     for (auto it = reco.begin(); it != reco.end(); ++it)
     {
         double p = 0, q = m_expected_f(*it);
+
+        if (q == 0)
+            q = 1e-7;
+
         for (auto jt = reco.begin(); jt != reco.end(); ++jt)
             p += gaus(*it, *jt);
-
+                
         p /= reco.size();
 
         m_f.push_back(p);
