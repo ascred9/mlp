@@ -120,7 +120,7 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
             std::vector<double> reco;
             for (unsigned int i = idx; i < idx + batch_size; i++)
             {
-                reco.push_back(calculate(input.at(i)).at(0));// - output.at(i).at(0));
+                reco.push_back(calculate(input.at(i)).at(0) - output.at(i).at(0));
             }
     
             m_kde->recalculate(reco);

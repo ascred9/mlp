@@ -65,7 +65,7 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 2;//4*32; //2*94;
+    int Nepoch = 32;//3*32; //2*94;
     int Nentries = tph->GetEntries();
     int batch_size = 1000;
     int minibatch_size = 1;
@@ -83,6 +83,7 @@ int process(TString filename)
     {
         tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
+        //if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.57 || bgo > 0) continue;
         if (abs(simen-en)>100) continue;
 
         double n_th = abs(th - M_PI/2);
@@ -158,6 +159,7 @@ int process(TString filename)
     {
     	tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
+        //if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.57 || bgo > 0) continue;
         if (abs(simen-en)>200) continue;
 
         double n_th = abs(th - M_PI/2);
