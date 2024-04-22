@@ -176,17 +176,17 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
         val += lambda*(grad_k + grad_b);
         // With negative b it doesn't converge
 
-        //for (int idata = 1; idata < m_ls_data.size(); idata++)
-        //{
-        //    double k = m_ls_data.at(idata).at(0);
-        //    double b = m_ls_data.at(idata).at(1);
-        //    double sumX = m_ls_data.at(idata).at(2);
-        //    double sumX2 = m_ls_data.at(idata).at(3);
+        for (int idata = 1; idata < m_ls_data.size(); idata++)
+        {
+            double k = m_ls_data.at(idata).at(0);
+            double b = m_ls_data.at(idata).at(1);
+            double sumX = m_ls_data.at(idata).at(2);
+            double sumX2 = m_ls_data.at(idata).at(3);
 
-        //    double gr_k = k * (n * input.at(idx).at(idata-1) - sumX) / (n * sumX2 - sumX * sumX) * n;
-        //    double gr_b = b * (1 - gr_k * sumX) / n * n;
-        //    val += lambda * (gr_k + gr_b);
-        //}
+            double gr_k = k * (n * input.at(idx).at(idata-1) - sumX) / (n * sumX2 - sumX * sumX) * n;
+            double gr_b = b * (1 - gr_k * sumX) / n * n;
+            val += lambda * (gr_k + gr_b);
+        }
     }
 
     set_addition_gradient(Vector::Constant(1, m_outsize, val));

@@ -34,8 +34,6 @@ std::array<double, 4> LinearLS::calculateKB(const std::vector<double>& x, const 
         sumX2 += X*X;
     }
     
-    sumX = 0;
-    
     double k = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     double b = (sumY - k * sumX) / n;
 

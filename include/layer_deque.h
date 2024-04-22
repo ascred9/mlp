@@ -56,7 +56,7 @@ private:
                                                         const std::vector<double>& weights) const;
     double get_regulization() const;
 
-    bool m_useZeroSlope = false;
+    bool m_useZeroSlope = true;
     std::vector<std::array<double, 4>> m_ls_data;
 
     bool m_useKDE = true;

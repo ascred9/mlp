@@ -15,7 +15,7 @@
 
 KDE::KDE()
 {
-    double sigma = 0.3;
+    double sigma = 0.1;
     m_expected_f = [sigma](double x){return 0.25 * (std::erf((1-x)/(sqrt(2)*sigma)) + std::erf((1+x)/(sqrt(2)*sigma)));};
     m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((-1-x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
     //m_expected_f = [sigma](double x){return 1./(sqrt(2*M_PI)*sigma) * exp(-0.5*pow(x/sigma, 2));};
@@ -57,7 +57,7 @@ void KDE::recalculate(const std::vector<double>& reco)
     dev = sqrt(dev);
 
     // Calculate h
-    m_h = pow(4. / (3.*count), 0.2) * dev / 5;
+    m_h = pow(4. / (3.*count), 0.2) * dev;
  
     // Create gaus
     auto gaus = [&](double x, double y){ return 1. / (sqrt(2 * M_PI) * m_h) * exp(-0.5*pow((x - y)/m_h, 2)); };
