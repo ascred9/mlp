@@ -13,7 +13,8 @@
 
 int test_kde()
 {
-    TFile* infile = new TFile("tph_data.root");
+    //TFile* infile = new TFile("tph_data.root");
+    TFile* infile = new TFile("tph_100_200.root");
     if (infile->IsZombie())
     {
         std::cout << "file read error" << std::endl;
@@ -21,7 +22,8 @@ int test_kde()
     }
 
     NetworkPtr net_ptr = std::make_unique<Network>();
-    net_ptr->init_from_file("build/btest_theta3.txt", "build/btest_theta4.txt");
+    //net_ptr->init_from_file("build/btest_theta3.txt", "build/btest_theta4.txt");
+    net_ptr->init_from_file("build/100_200_perpendicular_v4.txt", "build/100_200_perpendicular_v4.txt");
     
     TTree* tph = (TTree*)infile->Get("tph");
     float simen;
@@ -41,7 +43,7 @@ int test_kde()
     std::vector<std::vector<double>> input;
     std::vector<double> sim;
     int N = tph->GetEntries();
-    int size = 2000;
+    int size = 5000;
     //for (int i = 0; i < 1000; ++i)
     for (int i = 0; input.size() < size; i++)
     {
@@ -49,16 +51,16 @@ int test_kde()
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
 
         double n_th = abs(th - M_PI/2);
-        input.push_back({lxe, csi, rho});
-        sim.push_back((simen-750)/50.);
+        input.push_back({lxe, csi, rho, n_th, phi});
+        sim.push_back((simen-150)/50.);
     }
         
-    std::vector<std::vector<double>> reco;
+    std::vector<double> reco;
     for (const auto& in: input)
     {
         auto res = net_ptr->get_result(in);
-        res.at(0) = (res.at(0) - 750)/50.;
-        reco.push_back(res);
+        res.at(0) = (res.at(0) - 150)/50.;
+        reco.push_back(res.at(0));
     }
 
     KDE kde;
@@ -89,7 +91,7 @@ int test_kde()
     double KL = 0;
     for (int i = 0; i < size; i++)
     {
-        double rec = reco.at(i).front();
+        double rec = reco.at(i);
         graph_sim->AddPoint(rec, kde.m_expected_f(rec));
         graph_dsim->AddPoint(rec, kde.m_expected_df(rec));
         graph_exp->AddPoint(rec, kde.m_f.at(i));

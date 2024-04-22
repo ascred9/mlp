@@ -44,7 +44,8 @@ int process(TString filename)
     //net_ptr->create(5, 1, {5, 10, 5}, "build/bnetwork.txt"); return 1;
     //net_ptr->init_from_file("build/bnetwork_theta4.txt", "build/bnetwork_theta5.txt");
     //net_ptr->init_from_file("build/bnetwork.txt", "build/btest_theta.txt");
-    net_ptr->init_from_file("build/btest_theta12.txt", "build/btest_theta13.txt");
+    //net_ptr->init_from_file("build/btest_theta12.txt", "build/100_200_perpendicular.txt");
+    net_ptr->init_from_file("build/100_200_perpendicular_v3.txt", "build/100_200_perpendicular_v4.txt");
     //net_ptr->init_from_file("build/btest_theta.txt", "build/btest_theta2.txt");
     //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
@@ -65,9 +66,9 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 32;//3*32; //2*94;
+    int Nepoch = 15; //2*94;
     int Nentries = tph->GetEntries();
-    int batch_size = 1000;
+    int batch_size = 5000;
     int minibatch_size = 1;
     double T = .5;
     std::vector<std::vector<double>> in, out, weights;
@@ -83,8 +84,7 @@ int process(TString filename)
     {
         tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
-        //if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.57 || bgo > 0) continue;
-        if (abs(simen-en)>100) continue;
+        if (abs(simen-en)>50) continue;
 
         double n_th = abs(th - M_PI/2);
         //in.push_back({lxe, csi, n_th, phi, rho});
@@ -92,7 +92,7 @@ int process(TString filename)
         //out.push_back({((lxe+csi)/simen)});
         out.push_back({simen});
 
-        double weight = 1;//std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
+        double weight = 1;//std::exp((rho-51)/T);//std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
         weights.push_back({weight});
 
         //double alpha = 0.814751 + 0.0502268 * 1. / (1. + std::exp((rho - 42.83) / 1.622));
@@ -159,7 +159,6 @@ int process(TString filename)
     {
     	tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
-        //if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)<0.57 || bgo > 0) continue;
         if (abs(simen-en)>200) continue;
 
         double n_th = abs(th - M_PI/2);

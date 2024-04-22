@@ -78,7 +78,7 @@ void draw_macro(TString filename = "out.root")
     }
     else
     {
-        tph->Draw("rec>>h5(700, 800, 100, 100)");
+        tph->Draw("rec>>h5(100, 200, 100, 100)");
     }
     tph->Draw("simen", "", "same");
     
