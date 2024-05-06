@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -30,6 +31,7 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 #include "glayer.h"
 #include "kde.h"
 #include "linearLS.h"
+#include "kstest.h"
 
 
 class LayerDeque
@@ -56,14 +58,24 @@ private:
                                                         const std::vector<double>& weights) const;
     double get_regulization() const;
 
-    bool m_useZeroSlope = true;
-    std::vector<std::array<double, 4>> m_ls_data;
-
-    bool m_useKDE = true;
-    std::unique_ptr<KDE> m_kde;
     void prepare_batch(const std::vector<std::vector<double>>& input,
                        const std::vector<std::vector<double>>& output,
                        unsigned int id, unsigned int batch_size);
+
+    bool m_useZeroSlope = false;
+    std::vector<std::array<double, 4>> m_ls_data;
+
+    bool m_useKDE = false;
+    std::unique_ptr<KDE> m_kde;
+
+    bool m_useKS = false;
+    std::unique_ptr<KStest> m_ks;
+
+    bool m_neighbourSum = true;
+    int m_kNeighbours = 50;
+    std::string m_savedNeighbours = "neighbours.dat";
+    std::vector<int> m_sortedIndeces;
+    std::vector<int> m_sortedPlaces;
 
 public:
     LayerDeque();

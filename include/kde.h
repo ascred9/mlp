@@ -20,6 +20,7 @@
 #include <set>
 #include <stdexcept>
 #include <vector>
+#include <thread>
 
 #include "eigen-3.4.0/Eigen/Core"
 #include "eigen-3.4.0/Eigen/Eigenvalues"

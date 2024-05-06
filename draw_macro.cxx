@@ -41,8 +41,8 @@ void draw_macro(TString filename = "out.root")
 
     tph->Draw("en - simen>>h2origin(400)", "abs(en - simen)<150", "same");
     gROOT->ProcessLine("h2->SetLineColor(kBlack)");
-    gROOT->ProcessLine("h2->Fit(\"gausn\", \"\", \"\", -50, 50)");
-    gROOT->ProcessLine("h2origin->Fit(\"gausn\", \"\", \"\", -50, 50)");
+    gROOT->ProcessLine("h2->Fit(\"gausn\", \"\", \"\", -10, 10)");
+    gROOT->ProcessLine("h2origin->Fit(\"gausn\", \"\", \"\", -10, 10)");
 
     c1->cd(2)->cd(2);
     if (flag)

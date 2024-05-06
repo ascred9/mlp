@@ -40,6 +40,36 @@ LayerDeque::LayerDeque():
         m_kde = std::make_unique<KDE>();
         //m_kde->set_verbose();
     }
+    
+    if (m_useKS)
+    {
+        m_ks = std::make_unique<KStest>(0.1, [](double x) {
+            double a = sqrt(2) * 0.2;
+            return -0.141047*a*pow(2.71828, -pow((1-x)/a, 2)) + 0.141047*a*pow(2.71828, -pow((1+x)/a, 2))
+                + (0.25*x - 0.25) * std::erf((1-x)/a) + (0.25*x + 0.25) * std::erf((1+x)/a) + 0.5;
+        });
+        //m_ks->set_verbose();
+    }
+
+    if (m_neighbourSum)
+    {
+        m_sortedPlaces.clear();
+        m_sortedIndeces.clear();
+        std::ifstream istrm(m_savedNeighbours, std::ios::binary);
+        if (!istrm.is_open())
+            std::cout << "Neighbours::Failed to open file, it will be stored soon!" << std::endl;
+        else
+        {
+            int place, ind;
+            while (istrm >> place >> ind)
+            {
+                m_sortedPlaces.push_back(place);
+                m_sortedIndeces.push_back(ind);
+            }
+        }
+
+        istrm.close();
+    }
 }
 
 LayerDeque::~LayerDeque()
@@ -133,6 +163,30 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
         //const double val = 100000000*m_kde->get_gradient( idx % batch_size);
         val += 1 * m_kde->get_gradient( idx % batch_size);
     }
+    
+    if (m_useKS)
+    {
+        if (idx % batch_size == 0)
+        {
+            for (auto &layer: m_layers)
+                layer->m_trainMode = false;
+
+            // Fill array
+            std::vector<double> reco;
+            for (unsigned int i = idx; i < idx + batch_size; i++)
+            {
+                //reco.push_back(calculate(input.at(i)).at(0) - output.at(i).at(0));
+                reco.push_back(calculate(input.at(i)).at(0));
+            }
+    
+            m_ks->calculateKS(reco);
+    
+            for (auto &layer: m_layers)
+                layer->m_trainMode = true;
+        }
+
+        val += 1e3 * m_ks->get_gradient( idx % batch_size);
+    }
 
     if (m_useZeroSlope)
     {
@@ -142,12 +196,14 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
             for (auto &layer: m_layers)
                 layer->m_trainMode = false;
 
-            std::vector<double> delta, sim;
+            std::vector<double> delta, sim, rec;
             for (unsigned int i = idx; i < idx + batch_size; i++)
             {
-                double d = calculate(input.at(i)).at(0) - output.at(i).at(0);
-                delta.push_back(d);
-                sim.push_back(output.at(i).at(0));
+                double r = calculate(input.at(i)).at(0);
+                double s = output.at(i).at(0);
+                delta.push_back(r-s);
+                rec.push_back(r);
+                sim.push_back(s);
             }
 
             for (auto &layer: m_layers)
@@ -163,10 +219,19 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
 
                 m_ls_data.push_back(LinearLS::calculateKB(x, delta));
             }
+
+            for (int ipar = 0; ipar < input.at(0).size(); ipar++)
+            {
+                std::vector<double> x;
+                for (unsigned int i = idx; i < idx + batch_size; i++)
+                    x.push_back(input.at(i).at(ipar));
+
+                m_ls_data.push_back(LinearLS::calculateKB(x, rec));
+            }
         }
 
         int n = output.size();
-        double lambda = 1e1;
+        double lambda = 1e3;
         double ksim = m_ls_data.at(0).at(0);
         double bsim = m_ls_data.at(0).at(1);
         double sumXsim = m_ls_data.at(0).at(2);
@@ -174,19 +239,52 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
         double grad_k = ksim * (n * output.at(idx).at(0) - sumXsim) / (n * sumX2sim - sumXsim * sumXsim) * n;
         double grad_b = bsim * (1 - grad_k * sumXsim) / n * n;
         val += lambda*(grad_k + grad_b);
-        // With negative b it doesn't converge
 
         for (int idata = 1; idata < m_ls_data.size(); idata++)
         {
+            //if (idata == 2 || (idata > 5 && idata < 8))
+            if ((idata > 5 && idata < 8))
+                continue;
+
             double k = m_ls_data.at(idata).at(0);
             double b = m_ls_data.at(idata).at(1);
             double sumX = m_ls_data.at(idata).at(2);
             double sumX2 = m_ls_data.at(idata).at(3);
 
-            double gr_k = k * (n * input.at(idx).at(idata-1) - sumX) / (n * sumX2 - sumX * sumX) * n;
-            double gr_b = b * (1 - gr_k * sumX) / n * n;
+            double gr_k = k * (n * input.at(idx).at((idata-1) % 5) - sumX) / (n * sumX2 - sumX * sumX) * n;
+            double gr_b = 0;//b * (1 - gr_k * sumX) / n * n;
             val += lambda * (gr_k + gr_b);
         }
+    }
+
+    if (m_neighbourSum)
+    {
+        auto it = m_sortedIndeces.begin() + m_sortedPlaces.at(idx);
+        if (*it != idx)
+        {
+            std::cout << "Neighbours::Error! Wrong indeces!" << std::endl;
+        }
+
+        auto istart = std::distance(m_sortedIndeces.begin(), it) > m_kNeighbours ? it - m_kNeighbours : m_sortedIndeces.begin();
+        auto iend = std::distance(it, m_sortedIndeces.end()) > m_kNeighbours ? it + m_kNeighbours : m_sortedIndeces.end();
+        
+        for (auto &layer: m_layers)
+            layer->m_trainMode = false;
+
+        double sum_rec = 0, sum_sim = 0;
+        for (auto jt = istart; jt != iend; ++jt)
+        {
+            int idx = *jt;
+            double r = calculate(input.at(idx)).at(0);
+            double s = output.at(idx).at(0);
+            sum_rec += r;
+            sum_sim += s;
+        }
+
+        for (auto &layer: m_layers)
+            layer->m_trainMode = true;
+
+        val += 1e3*(sum_rec - sum_sim) / std::distance(istart, iend);
     }
 
     set_addition_gradient(Vector::Constant(1, m_outsize, val));
@@ -404,7 +502,7 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
     }
     else if (m_loss_type == "HUBER")
     {
-        double delta = 0.04;
+        double delta = 0.05;
         auto huber = [delta](double a) {return abs(a) < delta ?  0.5*pow(a, 2) : delta * (abs(a) - delta);};
         m_floss = [this, huber](const Vector& real, const Vector& output){return (output-real).unaryExpr(huber)/ m_outsize;};
         auto dhuber = [delta](double a) {return abs(a) < delta ?  a : delta * abs(a) / a;};
@@ -536,6 +634,50 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
 
     set_trainMode(true);
 
+    if (m_neighbourSum && m_sortedIndeces.empty() && m_sortedPlaces.empty())
+    {
+        std::cout << "Start sort" << std::endl;
+        std::multimap<double, int> sortedOutput;
+        clock_t start, end;
+        start = clock();
+
+        m_sortedIndeces.clear();
+        m_sortedPlaces.clear();
+
+        for (unsigned int idx = 0; idx < output.size(); ++idx)
+        {
+            sortedOutput.emplace_hint(std::next(sortedOutput.begin(), (sortedOutput.size() * (output.at(idx).at(0) + 1) / 2.)),
+                                      std::pair{output.at(idx).at(0), idx});
+            if (idx % 1000 == 0)
+                std::cout << sortedOutput.size() << "/" << output.size() << std::endl;
+        }
+
+        for (auto it = sortedOutput.begin(); it != sortedOutput.end(); ++it)
+            m_sortedIndeces.push_back(it->second);
+
+        double epsilon = 1e-4;
+        for (unsigned int idx = 0; idx < output.size(); ++idx)
+        {
+            auto it = sortedOutput.lower_bound(output.at(idx).at(0) - epsilon);
+            while (it->second != idx)
+                ++it;
+
+            m_sortedPlaces.push_back(std::distance(sortedOutput.begin(), it));
+
+            if (idx % 1000 == 0)
+                std::cout << m_sortedPlaces.size() << "/" << output.size() << std::endl;
+        }
+
+        std::ofstream ostrm(m_savedNeighbours, std::ios::binary);
+        for (int id = 0; id < m_sortedPlaces.size(); ++id)
+            ostrm << m_sortedPlaces.at(id) << " \t " << m_sortedIndeces.at(id) << std::endl;
+
+        ostrm.close();        
+
+        end = clock();
+        std::cout << "Finish sort: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
+    }
+
     // Calculate gradients and update weights
     for (unsigned int idx = 0; idx < input.size(); ++idx)
     {
@@ -580,8 +722,21 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
     if (m_useKDE)
         std::cout << "KL: " << m_kde->get_kl() << " -> grad: " << m_kde->get_dkl() << std::endl;
 
+    if (m_useKS)
+        std::cout << "KS: " << m_ks->get_sup() << " x0: " << m_ks->get_x0() << std::endl;
+
     if (m_useZeroSlope)
-        std::cout << "k: " << m_ls_data.at(0).at(0) << ", b " << m_ls_data.at(0).at(1) << std::endl;
+    {
+        std::cout << "simen \t k: " << m_ls_data.at(0).at(0) << ", b " << m_ls_data.at(0).at(1) << std::endl;
+        std::cout << "lxe \t k: " << m_ls_data.at(1).at(0) << ", b " << m_ls_data.at(1).at(1) << std::endl;
+        std::cout << "csi \t k: " << m_ls_data.at(2).at(0) << ", b " << m_ls_data.at(2).at(1) << std::endl;
+        std::cout << "rho \t k: " << m_ls_data.at(3).at(0) << ", b " << m_ls_data.at(3).at(1) << std::endl;
+        std::cout << "theta \t k: " << m_ls_data.at(4).at(0) << ", b " << m_ls_data.at(4).at(1) << std::endl;
+        std::cout << "phi \t k: " << m_ls_data.at(5).at(0) << ", b " << m_ls_data.at(5).at(1) << std::endl;
+        std::cout << "rho2 \t k: " << m_ls_data.at(8).at(0) << ", b " << m_ls_data.at(8).at(1) << std::endl;
+        std::cout << "theta2 \t k: " << m_ls_data.at(9).at(0) << ", b " << m_ls_data.at(9).at(1) << std::endl;
+        std::cout << "phi2 \t k: " << m_ls_data.at(10).at(0) << ", b " << m_ls_data.at(10).at(1) << std::endl;
+    }
 
     set_trainMode(false);
 }

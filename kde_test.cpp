@@ -23,7 +23,7 @@ int test_kde()
 
     NetworkPtr net_ptr = std::make_unique<Network>();
     //net_ptr->init_from_file("build/btest_theta3.txt", "build/btest_theta4.txt");
-    net_ptr->init_from_file("build/100_200_perpendicular_v4.txt", "build/100_200_perpendicular_v4.txt");
+    net_ptr->init_from_file("build/100_200_perpendicular_v9.txt", "build/100_200_perpendicular_v9.txt");
     
     TTree* tph = (TTree*)infile->Get("tph");
     float simen;
@@ -43,12 +43,13 @@ int test_kde()
     std::vector<std::vector<double>> input;
     std::vector<double> sim;
     int N = tph->GetEntries();
-    int size = 5000;
+    int size = 10000;
     //for (int i = 0; i < 1000; ++i)
     for (int i = 0; input.size() < size; i++)
     {
         tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
+        if (abs(simen-en)>200) continue;
 
         double n_th = abs(th - M_PI/2);
         input.push_back({lxe, csi, rho, n_th, phi});
@@ -63,9 +64,13 @@ int test_kde()
         reco.push_back(res.at(0));
     }
 
+    clock_t start, end;
+    start = clock();
     KDE kde;
     kde.set_verbose();
     kde.recalculate(reco);
+    end = clock();
+    std::cout << "Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
 
     TH1F* hist_sim = new TH1F("hsim", "hsim", 100, -2, 2);
     TH1F* hist_exp = new TH1F("hexp", "hexp", 100, -2, 2);
@@ -92,6 +97,8 @@ int test_kde()
     for (int i = 0; i < size; i++)
     {
         double rec = reco.at(i);
+        if (abs(rec) > 2)
+            continue;
         graph_sim->AddPoint(rec, kde.m_expected_f(rec));
         graph_dsim->AddPoint(rec, kde.m_expected_df(rec));
         graph_exp->AddPoint(rec, kde.m_f.at(i));
@@ -154,6 +161,45 @@ int test_kde()
     c->cd(4)->SetGrid();
     c->cd(4);
     gr_dep->Draw("AP");
+
+    TMultiGraph* mg3 = new TMultiGraph("mg3", "mg3");
+    TGraph* graph_cdf_act = new TGraph();
+    graph_cdf_act->SetName("cdf actual");
+    TGraph* graph_cdf_exp = new TGraph();
+    graph_cdf_exp->SetName("cdf expected");
+    TGraph* graph_cdf_diff = new TGraph();
+    graph_cdf_diff->SetName("cdf diff");
+    std::multiset<double> sorted_reco(reco.begin(), reco.end());
+
+    auto func = [](double x) {
+        double a = sqrt(2) * 0.2;
+        return -0.141047*a*pow(2.71828, -pow((1-x)/a, 2)) + 0.141047*a*pow(2.71828, -pow((1+x)/a, 2))
+                + (0.25*x - 0.25) * std::erf((1-x)/a) + (0.25*x + 0.25) * std::erf((1+x)/a) + 0.5;
+    };
+
+    int count = 0;
+    for (auto rec: sorted_reco)
+    {
+        count++;
+        graph_cdf_act->AddPoint(rec, count * 1./sorted_reco.size());
+        graph_cdf_exp->AddPoint(rec, func(rec));
+        graph_cdf_diff->AddPoint(rec, abs(count * 1./sorted_reco.size() - func(rec)));
+    }
+
+    TCanvas* c2 = new TCanvas("c2", "c2", 900, 900);
+    c2->Divide(2);
+    c2->cd(1)->SetGrid();
+    c2->cd(1);
+    mg3->Add(graph_cdf_act, "AP");
+    mg3->Add(graph_cdf_exp, "AP");
+    graph_cdf_exp->SetMarkerColor(kRed);
+    mg3->Draw("AP");
+
+    c2->cd(2)->SetGrid();
+    c2->cd(2);
+    graph_cdf_diff->Draw("AP");
+    std::cout << "Kolmogorov-Smirnov test: " << graph_cdf_diff->GetMaximum() << std::endl;
+    std::cout << "Wasserstein distance: " << graph_cdf_diff->Integral() << std::endl;
 
     return 0;
 }

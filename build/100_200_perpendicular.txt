@@ -3,9 +3,9 @@ numb_output 1
 deep 5
 nepoch 0
 loss_func HUBER
-step 1e-3
+step 1e-1
 topology 5 5 10 5 1 
-active_funcs linear lrelu lrelu lrelu linear 
+active_funcs linear lrelu th lrelu linear 
 input_transforms
 	normal 4 0 200 95.03 32.23
 	normal 4 0 180 27.55 22.95
