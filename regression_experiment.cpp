@@ -39,7 +39,8 @@ int process(TString filename)
     tph->SetBranchAddress("rho",	&rho);
 
     NetworkPtr net_ptr = std::make_unique<Network>();
-    net_ptr->init_from_file("build/net_experiment.txt", "build/net_experiment2.txt");
+    //net_ptr->init_from_file("build/net_experiment.txt", "build/net_experiment2.txt");
+    net_ptr->init_from_file("build/700_800_perpendicular.txt", "build/net_experiment2.txt");
     //net_ptr->create(5, 1, {10, 10, 10}, "build/network.txt"); return 1;
 
     if (net_ptr == nullptr)

@@ -116,11 +116,11 @@ void PrimitiveDrawer::read_weights(const Network* net)
         {
             ss >> str; // read [ scope
             while (ss >> str && str != "]")
-                m_weights.push_back(std::stof(str));
+                m_weights.push_back(std::stod(str));
 
             ss >> str; // read { scope
             while (ss >> str && str != "}")
-                m_biases.push_back(std::stof(str));
+                m_biases.push_back(std::stod(str));
         }
     }
 

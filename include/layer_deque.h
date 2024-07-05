@@ -32,6 +32,7 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 #include "kde.h"
 #include "linearLS.h"
 #include "kstest.h"
+#include "random_generator.h"
 
 
 class LayerDeque
@@ -65,17 +66,31 @@ private:
     bool m_useZeroSlope = false;
     std::vector<std::array<double, 4>> m_ls_data;
 
-    bool m_useKDE = false;
+    bool m_useKDE = true;
     std::unique_ptr<KDE> m_kde;
 
     bool m_useKS = false;
     std::unique_ptr<KStest> m_ks;
 
-    bool m_neighbourSum = true;
-    int m_kNeighbours = 50;
+    bool m_neighbourSum = false;
+    int m_kNeighbours = 10;
+    double m_lastResByNeighbours = 0;
+    double m_sigmaByNeighbours = 0;
     std::string m_savedNeighbours = "neighbours.dat";
     std::vector<int> m_sortedIndeces;
     std::vector<int> m_sortedPlaces;
+
+    bool m_correlation = false;
+    double m_corr;
+    double m_s_mean;
+    double m_r_sigma;
+    double m_s_sigma;
+
+    bool m_neigh = false;
+    int m_kNeigh = 20;
+    double m_sum;
+
+    NovosibirskGenerator m_generator = NovosibirskGenerator(0., 1, 0.15);
 
 public:
     LayerDeque();

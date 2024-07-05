@@ -8,11 +8,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 set(CMAKE_BUILD_TYPE "Release")
 
 include_directories(include)
 
 add_library(mlp SHARED src/drawer.cpp src/network.cpp src/bnetwork.cpp src/cnetwork.cpp src/gnetwork.cpp
     src/layer.cpp src/blayer.cpp src/glayer.cpp src/layer_deque.cpp src/transformation.cpp src/kmeans.cpp
-    src/pca.cpp src/kde.cpp src/linearLS.cpp src/kstest.cpp)
+    src/pca.cpp src/kde.cpp src/linearLS.cpp src/kstest.cpp src/random_generator.cpp)

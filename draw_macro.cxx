@@ -6,6 +6,13 @@
 
 #include <iostream>
 
+Double_t LogGaus(Double_t* x, Double_t *p)
+{
+    Double_t xi = 2 * sqrt(2*log(2));
+    Double_t s0 = 2/xi * log(xi*p[3]/2 + sqrt(1 + pow(xi*p[3]/2, 2)));
+    return p[0] * p[3]/(sqrt(2*M_PI) * p[2] * s0) * exp(-pow(log(1 - p[3] * (x[0]-p[1]) / p[2])/s0, 2)/2 - pow(s0, 2)/2);
+}
+
 void draw_macro(TString filename = "out.root")
 {
     bool flag = false;
@@ -29,11 +36,11 @@ void draw_macro(TString filename = "out.root")
     if (flag)
         tph->Draw("(lxe+csi)/rec - simen:simen", "abs((lxe+csi)/rec - simen)<150");
     else
-        tph->Draw("rec - simen:simen", "abs(rec - simen)<150");
+        tph->Draw("rec - simen:simen", "abs(rec - simen)<150", "");
     
     
-    c1->cd(2)->Divide(2, 1);
-    c1->cd(2)->cd(1);
+    //c1->cd(2)->Divide(2, 1);
+    c1->cd(2);//->cd(1);
     if (flag)
         tph->Draw("(lxe+csi)/rec - simen>>h2(400)", "abs((lxe+csi)/rec - simen)<150");
     else
@@ -41,14 +48,20 @@ void draw_macro(TString filename = "out.root")
 
     tph->Draw("en - simen>>h2origin(400)", "abs(en - simen)<150", "same");
     gROOT->ProcessLine("h2->SetLineColor(kBlack)");
-    gROOT->ProcessLine("h2->Fit(\"gausn\", \"\", \"\", -10, 10)");
-    gROOT->ProcessLine("h2origin->Fit(\"gausn\", \"\", \"\", -10, 10)");
+    TF1* logGaus = new TF1("logGaus", LogGaus, -60, 60, 4);
+    logGaus->SetParNames("A", "m", "s", "eta");
+    logGaus->SetParameter(0, 1000);
+    logGaus->SetParameter(1, 0);
+    logGaus->SetParameter(2, 30);
+    logGaus->SetParameter(3, 0.1);
+    gROOT->ProcessLine("h2->Fit(\"logGaus\", \"\", \"\", -30, 30)");
+    gROOT->ProcessLine("h2origin->Fit(\"logGaus\", \"\", \"\", -40, 20)");
 
-    c1->cd(2)->cd(2);
-    if (flag)
-        tph->Draw("pow((lxe+csi)/rec - simen,2):simen", "abs((lxe+csi)/rec - simen)<150");
-    else
-        tph->Draw("pow(rec - simen,2):simen", "abs(rec - simen)<150");
+    //c1->cd(2)->cd(2);
+    //if (flag)
+    //    tph->Draw("pow((lxe+csi)/rec - simen,2):simen", "abs((lxe+csi)/rec - simen)<150");
+    //else
+    //    tph->Draw("pow(rec - simen,2):simen", "abs(rec - simen)<150");
     
     c1->cd(3)->Divide(1, 2);
     c1->cd(3)->cd(1);
@@ -78,9 +91,10 @@ void draw_macro(TString filename = "out.root")
     }
     else
     {
-        tph->Draw("rec>>h5(100, 200, 100, 100)");
+        tph->Draw("rec>>h5(200, 200, 100, 100)");
     }
     tph->Draw("simen", "", "same");
+    tph->Draw("en", "", "same");
     
     if (false)
     {

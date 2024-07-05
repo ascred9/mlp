@@ -15,9 +15,24 @@
 
 KDE::KDE()
 {
-    double sigma = 0.2;
-    m_expected_f = [sigma](double x){return 0.25 * (std::erf((1-x)/(sqrt(2)*sigma)) + std::erf((1+x)/(sqrt(2)*sigma)));};
-    m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((-1-x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
+    double sigma = 0.24;
+    double xi = 2 * sqrt(2*log(2));
+    double eta = 0.15;
+    double s0 = 2/xi * log(xi*eta/2 + sqrt(1 + pow(xi*eta/2, 2)));
+    m_expected_f = [sigma, eta, s0](double x){double part1 = 1., part2 = 1.;
+                                              if ((x+1)*eta/sigma < 1)
+                                                part1 = std::erf( (s0*s0 - log(1 - (x+1)*eta/sigma)) / (sqrt(2) * s0) );
+                                              if((x-1)*eta/sigma < 1)
+                                                part2 = std::erf( (s0*s0 - log(1 - (x-1)*eta/sigma)) / (sqrt(2) * s0) );
+                                              return 0.5 * (part1 - part2);};
+    m_expected_df = [sigma, eta, s0](double x){double part1 = 1., part2 = 1.;
+                                               if ((x+1)*eta/sigma > 1)
+                                                part1 = -exp(-0.5*pow(log(1-eta*(x+1)/sigma)/s0, 2));
+                                               if ((x-1)*eta/sigma > -1) 
+                                                part2 = -exp(-0.5*pow(log(1-eta*(x-1)/sigma)/s0, 2));
+                                               return 0.5 * eta * exp(-0.5*s0*s0) / (sqrt(2*M_PI) * sigma * s0 ) * (part1 - part2);};
+    //m_expected_f = [sigma](double x){return 0.25 * (std::erf((1-x)/(sqrt(2)*sigma)) + std::erf((1+x)/(sqrt(2)*sigma)));};
+    //m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((1+x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
     //m_expected_f = [sigma](double x){return 1./(sqrt(2*M_PI)*sigma) * exp(-0.5*pow(x/sigma, 2));};
 }
 
@@ -57,7 +72,7 @@ void KDE::recalculate(const std::vector<double>& reco)
     dev = sqrt(dev);
 
     // Calculate h
-    m_h = pow(4. / (3.*count), 0.2) * dev;// / 4;
+    m_h = pow(4. / (3.*count), 0.2) * dev / 4;
  
     // Create gaus
     auto gaus = [&](double x, double y){ return 1. / (sqrt(2 * M_PI) * m_h) * exp(-0.5*pow((x - y)/m_h, 2)); };
@@ -88,9 +103,6 @@ void KDE::recalculate(const std::vector<double>& reco)
 
         double p = 0, q = m_expected_f(val);
 
-        if (q == 0)
-            q = 1e-9;
-
         for (auto jt = reco.begin(); jt != reco.end(); ++jt)
         {
             if (abs(*jt) > 3)
@@ -103,9 +115,15 @@ void KDE::recalculate(const std::vector<double>& reco)
 
         m_f.push_back(p);
         m_qs.push_back(q);
-        m_logs.push_back(log(2*p/(p+q)));
+        //m_logs.push_back(log(2*p/(p+q)));
+        double clog = (q == 0 || p == 0) ? 0. : log(p/q);
+        //std::cout << clog << " " << val << " " << q << std::endl;
+        //int k;
+        //std::cin >> k;
+        m_logs.push_back(clog);
 
-        m_kl += 0.5 * (log(2*p/(p+q)) + q/p *log(2*q/(p+q)));
+        //m_kl += 0.5 * (log(2*p/(p+q)) + q/p *log(2*q/(p+q))); //Jef
+        m_kl += clog;
     }
 
     m_kl /= count;
@@ -135,10 +153,9 @@ void KDE::recalculate(const std::vector<double>& reco)
             int ind = std::distance(reco.begin(), jt);
             double pj = m_f.at(ind);
             double qj = m_qs.at(ind);//m_expected_f(*jt);
-            if (qj == 0)
-                qj = 1e-9;
 
-            double part = dgaus(val, *jt) / pj * (m_logs.at(ind));// + 1); 
+            //double part = dgaus(val, *jt) / pj * (m_logs.at(ind));// + 1); // Jef
+            double part = dgaus(val, *jt) / pj * (m_logs.at(ind) + 1); 
             dp += part;
         }
         dp /= count;

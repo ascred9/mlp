@@ -45,13 +45,16 @@ int process(TString filename)
     //net_ptr->init_from_file("build/bnetwork_theta4.txt", "build/bnetwork_theta5.txt");
     //net_ptr->init_from_file("build/bnetwork.txt", "build/btest_theta.txt");
     //net_ptr->init_from_file("build/btest_theta12.txt", "build/100_200_perpendicular.txt");
-    net_ptr->init_from_file("build/100_200_perpendicular_v1.txt", "build/100_200_perpendicular_v2.txt");
+    //net_ptr->init_from_file("build/100_200_perpendicular_v4.txt", "build/100_200_perpendicular_v4.txt");
     //net_ptr->init_from_file("build/btest_theta.txt", "build/btest_theta2.txt");
     //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
     //NetworkPtr net_ptr = std::make_unique<Network>();
-    //net_ptr->create(5, 1, {10, 10, 10}, "build/network.txt"); return 1;
+    //net_ptr->create(5, 1, {10, 5}, "build/network.txt"); return 1;
     //net_ptr->init_from_file("build/network.txt", "build/test.txt");
+    net_ptr->init_from_file("build/test.txt", "build/test.txt");
+    //net_ptr->init_from_file("build/500_1000_perpendicular.txt", "build/test2.txt");
+    //net_ptr->init_from_file("build/test8.txt", "build/test9.txt");
 
     if (net_ptr == nullptr)
     {
@@ -66,9 +69,9 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 2*94;
+    int Nepoch = 94;
     int Nentries = tph->GetEntries();
-    int batch_size = 1;
+    int batch_size = 1000;
     int minibatch_size = 1;
     double T = .5;
     std::vector<std::vector<double>> in, out, weights;
@@ -79,12 +82,15 @@ int process(TString filename)
 
     int count = 0;
 
+    NovosibirskGenerator m_generator = NovosibirskGenerator(0., 0.4, 0.15);
+    TH1F *hhh = new TH1F("hhh", "hhh", 300, -3, 3);
+
     std::map<int, double> max; // rho - key, max weight - value
     for (int i=0; i < Nentries * 0.8; i++)
     {
         tph->GetEntry(i);
         if (phi > 7 || th > 4 || rho < 37 || abs(th-M_PI/2)>0.57 || bgo > 0) continue;
-        if (abs(simen-en)>200) continue;
+        //if (abs(simen-en)>200) continue;
 
         double n_th = abs(th - M_PI/2);
         //in.push_back({lxe, csi, n_th, phi, rho});
@@ -95,11 +101,14 @@ int process(TString filename)
         double weight = 1;//std::exp((rho-51)/T);//std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
         weights.push_back({weight});
 
+        hhh->Fill((simen-150)/50+m_generator.generate());
         //double alpha = 0.814751 + 0.0502268 * 1. / (1. + std::exp((rho - 42.83) / 1.622));
         //double weight = std::exp(-abs(lxe + csi - alpha * simen) / T);
         //if (lxe + csi - alpha * simen < 0) // left tail has more events
         //    weight = pow(weight, 1./2);
     }
+
+    //hhh->Draw();
 
     TFile* outfile = new TFile("out.root", "recreate");
     TTree* t = new TTree("tph", "tph");
@@ -175,11 +184,11 @@ int process(TString filename)
     }
 
     net_ptr->print(std::cout);
-    DrawNet(net_ptr.get());
+    //DrawNet(net_ptr.get());
 
     tph->GetEntry(999);
     //DrawEvent(net_ptr.get(), {lxe, csi, abs(th - M_PI/2), phi, rho});
-    DrawEvent(net_ptr.get(), {lxe, csi, rho, abs(th - M_PI/2), phi});
+    //DrawEvent(net_ptr.get(), {lxe, csi, rho, abs(th - M_PI/2), phi});
 
     t->Write();
     tnet->Write();
