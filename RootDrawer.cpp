@@ -1,12 +1,15 @@
 #include "include/drawer.h"
 #include "include/network.h"
 
+#include "TSystem.h"
 #include "TCanvas.h"
 #include "TArrow.h"
 #include "TEllipse.h"
 #include "TText.h"
 #include "TColor.h"
 #include "TStyle.h"
+
+static int id = 0;
 
 void drawNode(const NodePrimitive& n)
 {
@@ -42,15 +45,23 @@ void DrawNet(const Network* net)
     NodePrimitive::set_draw_func(std::function<void(const NodePrimitive& node)>(drawNode));
     ConnectionPrimitive::set_draw_func(std::function<void(const ConnectionPrimitive& connection)>(drawConnection));
     drawer.draw();
+    c->SaveAs("net.png");
+    c->Close();
+    gSystem->ProcessEvents();
+    delete c;
 }
 
 void DrawEvent(Network* net, const std::vector<double>& input)
 {
     gStyle->SetPalette(kThermometer);
 
-    //TCanvas* c = new TCanvas("cevent", "Neural Network Event", 1200, 900);
+    TCanvas* c = new TCanvas("cevent", "Neural Network Event", 1200, 900);
     PrimitiveDrawer drawer(net);
-    //NodePrimitive::set_draw_func(std::function<void(const NodePrimitive& node)>(drawNode));
-    //ConnectionPrimitive::set_draw_func(std::function<void(const ConnectionPrimitive& connection)>(drawConnection));
+    NodePrimitive::set_draw_func(std::function<void(const NodePrimitive& node)>(drawNode));
+    ConnectionPrimitive::set_draw_func(std::function<void(const ConnectionPrimitive& connection)>(drawConnection));
     drawer.draw_event(input);
+    c->SaveAs(Form("event%d.png", id++));
+    c->Close();
+    gSystem->ProcessEvents();
+    delete c;
 }

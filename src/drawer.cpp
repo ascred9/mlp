@@ -12,7 +12,7 @@
 
 #include "../include/drawer.h"
 
-std::string float_to_string(float v, int n = 2)
+std::string float_to_string(float v, int n = 3)
 {
     std::string res = std::to_string(v);
     auto pos = res.find(".");

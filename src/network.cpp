@@ -480,8 +480,8 @@ void Network::train(const int nepoch, const std::vector<std::vector<double>>& in
                                batch_size, minibatch_size);
 }
     
-void Network::train_input(const int nepoch, const std::vector<std::vector<double>>& train_input, const std::vector<std::vector<double>>& train_output,
-                          const std::vector<std::vector<double>>& train_weights,
+void Network::train_input(const int nepoch, std::vector<std::vector<double>> train_input, std::vector<std::vector<double>> train_output,
+                          std::vector<std::vector<double>> train_weights,
                           const std::vector<std::vector<double>>& test_input, const std::vector<std::vector<double>>& test_output,
                           const std::vector<std::vector<double>>& test_weights,
                           unsigned int batch_size, unsigned int minibatch_size)
@@ -491,6 +491,7 @@ void Network::train_input(const int nepoch, const std::vector<std::vector<double
     std::array<double, 3> epsilon = m_layer_deque.test(test_input, test_output, test_weights);
     pop(epsilon);
     double amp = m_layer_deque.get_step(); // step amplitude
+    std::random_device rd("/dev/random");
     for (int iep = 0; iep < nepoch; ++iep)
     {
         start = clock();
@@ -499,6 +500,10 @@ void Network::train_input(const int nepoch, const std::vector<std::vector<double
     	std::array<double, 3> epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
 
         // Training
+        //unsigned int rn = rd();
+        //std::shuffle(train_input.begin(), train_input.end(), std::mt19937{rn});
+        //std::shuffle(train_output.begin(), train_output.end(), std::mt19937{rn});
+        //std::shuffle(train_weights.begin(), train_weights.end(), std::mt19937{rn});
         m_layer_deque.train(train_input, train_output, train_weights, batch_size, minibatch_size);
 
         // Testing after

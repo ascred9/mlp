@@ -54,8 +54,8 @@ protected:
     void transform_output(std::vector<double>& out_value) const; // transform output from initial range to range [-1, +1]
     void reverse_transform_output(std::vector<double>& out_value) const; // reverse transform output from [-1, +1] to initial range
 
-    virtual void train_input(const int nepoch, const std::vector<std::vector<double>>& train_input, const std::vector<std::vector<double>>& train_output,
-                             const std::vector<std::vector<double>>& train_weights,
+    virtual void train_input(const int nepoch, std::vector<std::vector<double>> train_input, std::vector<std::vector<double>> train_output,
+                             std::vector<std::vector<double>> train_weights,
                              const std::vector<std::vector<double>>& test_input, const std::vector<std::vector<double>>& test_output,
                              const std::vector<std::vector<double>>& test_weights,
                              unsigned int batch_size, unsigned int minibatch_size);

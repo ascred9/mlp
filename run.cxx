@@ -1,4 +1,7 @@
-{ 
+#include "TROOT.h"
+#include <omp.h>
+
+void run(){
     gROOT->LoadMacro("build/libmlp.so");
     //gROOT->LoadMacro("cos_reg.cpp");
     //gROOT->LoadMacro("RootDrawer.cpp");

@@ -4,6 +4,8 @@
 #include "TPad.h"
 #include "TTree.h"
 
+#include "include/kde.h"
+
 #include <iostream>
 
 Double_t LogGaus(Double_t* x, Double_t *p)
@@ -85,6 +87,8 @@ void draw_macro(TString filename = "out.root")
         tph->Draw("rec - simen:rho>>h4(30, 30, 200, 200)", "abs(rec - simen)<100", "lego");
 
     c1->cd(4)->cd(2);
+    TCanvas* c2 = new TCanvas();
+    c2->cd();
     if (flag)
     {
         tph->Draw("(lxe+csi)/rec>>h5(700, 800, 100, 100)");
@@ -93,9 +97,29 @@ void draw_macro(TString filename = "out.root")
     {
         tph->Draw("rec>>h5(200, 200, 100, 100)");
     }
+    gROOT->ProcessLine("h5->SetLineColor(kRed)");
     tph->Draw("simen", "", "same");
     tph->Draw("en", "", "same");
-    
+
+    double sigma = 0.20 * 50;
+    double xi = 2 * sqrt(2*log(2));
+    double eta = 0.15;
+    double s0 = 2/xi * log(xi*eta/2 + sqrt(1 + pow(xi*eta/2, 2)));
+    auto expected_f = [sigma, eta, s0](double* xx, double* par){
+                                              double x = xx[0] - 150;
+                                              double part1 = 1., part2 = 1.;
+                                              if ((x+50)*eta/sigma < 1)
+                                                part1 = std::erf( (s0*s0 - log(1 - (x+50)*eta/sigma)) / (sqrt(2) * s0) );
+                                              if((x-50)*eta/sigma < 1)
+                                                part2 = std::erf( (s0*s0 - log(1 - (x-50)*eta/sigma)) / (sqrt(2) * s0) );
+                                              return 0.25 * par[0] * (part1 - part2);};
+    TF1* f = new TF1("fexpected", expected_f, 50, 250, 1);
+    f->SetParameter(0, 8000);
+    gROOT->ProcessLine("h5->Fit(\"fexpected\")");
+    f->SetLineStyle(kDashed);
+    f->SetLineColor(kBlack);
+    f->Draw("same");
+
     if (false)
     {
         TCanvas* c2 = new TCanvas("neuron_net2", "neuron net results", 900, 600);

@@ -160,7 +160,7 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
                 layer->m_trainMode = true;
         }
 
-        val += 1 * m_kde->get_gradient( idx % batch_size);
+        val += 1e1 * m_kde->get_gradient( idx % batch_size);
     }
     
     if (m_useKS)
@@ -230,7 +230,7 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
         }
 
         int n = output.size();
-        double lambda = 1e3;
+        double lambda = 1e2;
         double ksim = m_ls_data.at(0).at(0);
         double bsim = m_ls_data.at(0).at(1);
         double sumXsim = m_ls_data.at(0).at(2);
@@ -647,6 +647,22 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
             return ( (output - real).array() +
                       alpha * output.array().binaryExpr(real.array(), dloge) ) / m_outsize;
         };
+    }
+    else if (m_loss_type == "LOGX")
+    {
+        m_floss = [this](const Vector& real, const Vector& output){
+            auto loge = [](double x, double y) {
+                                                return log(1 + abs(x - y));
+            };
+            return ( output.array().binaryExpr(real.array(), loge) ) / m_outsize;
+        };
+        m_fploss = [this](const Vector& real, const Vector& output){
+            auto loge = [](double x, double y) {
+                                                return (x - y > 0 ? 1 : -1) / (1 + abs(x - y));
+            };
+            return ( output.array().binaryExpr(real.array(), loge) ) / m_outsize;
+        };
+
     }
     else if (m_loss_type == "MS")
     {

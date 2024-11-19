@@ -4,6 +4,7 @@
 #include <vector>
 #include <random>
 #include <iomanip>
+#include <omp.h>
 
 #include "include/network.h"
 #include "include/bnetwork.h"
@@ -11,11 +12,15 @@
 
 #include "TFile.h"
 #include "TTree.h"
+#include "TH1F.h"
 
 #include "RootDrawer.cpp"
 
+
 int process(TString filename)
 {
+    //ROOT::EnableImplicitMT();
+
     TFile* infile = new TFile(filename);
     if (infile->IsZombie())
     {
@@ -41,18 +46,18 @@ int process(TString filename)
     NetworkPtr net_ptr = std::make_unique<Network>();
     //BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
     //GradientNetworkPtr net_ptr = std::make_unique<GradientNetwork>();
-    //net_ptr->create(5, 1, {5, 10, 5}, "build/bnetwork.txt"); return 1;
+    //net_ptr->create(5, 1, {5, 10}, "build/bnetwork.txt"); return 1;
     //net_ptr->init_from_file("build/bnetwork_theta4.txt", "build/bnetwork_theta5.txt");
     //net_ptr->init_from_file("build/bnetwork.txt", "build/btest_theta.txt");
-    //net_ptr->init_from_file("build/btest_theta12.txt", "build/100_200_perpendicular.txt");
+    //net_ptr->init_from_file("build/btest_theta.txt", "build/btest_theta.txt");
     //net_ptr->init_from_file("build/100_200_perpendicular_v4.txt", "build/100_200_perpendicular_v4.txt");
     //net_ptr->init_from_file("build/btest_theta.txt", "build/btest_theta2.txt");
     //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
     //net_ptr->init_from_file("build/btest.txt", "build/btest.txt");
     //NetworkPtr net_ptr = std::make_unique<Network>();
-    //net_ptr->create(5, 1, {10, 5}, "build/network.txt"); return 1;
-    //net_ptr->init_from_file("build/network.txt", "build/test.txt");
-    net_ptr->init_from_file("build/test.txt", "build/test.txt");
+    //net_ptr->create(5, 1, {5, 10, 5}, "build/test.txt"); return 1;
+    net_ptr->init_from_file("build/test1.txt", "build/test1.txt");
+    //net_ptr->init_from_file("build/test.txt", "build/test.txt");
     //net_ptr->init_from_file("build/500_1000_perpendicular.txt", "build/test2.txt");
     //net_ptr->init_from_file("build/test8.txt", "build/test9.txt");
 
@@ -101,7 +106,7 @@ int process(TString filename)
         double weight = 1;//std::exp((rho-51)/T);//std::exp(-abs(en-simen) / T); //std::exp((n_th-0.55)/T);//std::exp(- w/T) / max[int(rho+0.5)]; 
         weights.push_back({weight});
 
-        hhh->Fill((simen-150)/50+m_generator.generate());
+        //hhh->Fill((simen-150)/50+m_generator.generate());
         //double alpha = 0.814751 + 0.0502268 * 1. / (1. + std::exp((rho - 42.83) / 1.622));
         //double weight = std::exp(-abs(lxe + csi - alpha * simen) / T);
         //if (lxe + csi - alpha * simen < 0) // left tail has more events
@@ -184,11 +189,17 @@ int process(TString filename)
     }
 
     net_ptr->print(std::cout);
-    //DrawNet(net_ptr.get());
+    DrawNet(net_ptr.get());
 
     tph->GetEntry(999);
     //DrawEvent(net_ptr.get(), {lxe, csi, abs(th - M_PI/2), phi, rho});
-    //DrawEvent(net_ptr.get(), {lxe, csi, rho, abs(th - M_PI/2), phi});
+    DrawEvent(net_ptr.get(), {lxe, csi, rho, abs(th - M_PI/2), phi});
+    tph->GetEntry(1313);
+    DrawEvent(net_ptr.get(), {lxe, csi, rho, abs(th - M_PI/2), phi});
+    tph->GetEntry(2425);
+    DrawEvent(net_ptr.get(), {lxe, csi, rho, abs(th - M_PI/2), phi});
+    tph->GetEntry(666);
+    DrawEvent(net_ptr.get(), {lxe, csi, rho, abs(th - M_PI/2), phi});
 
     t->Write();
     tnet->Write();
@@ -197,5 +208,11 @@ int process(TString filename)
     std::cout << "Processing Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
     outfile->Close();
 
+    return 0;
+}
+
+int main(int argc, char** argv)
+{
+    process("tph_100_200.root");
     return 0;
 }

@@ -235,8 +235,8 @@ void Layer::add_gradient(const std::pair<Matrix, Vector>& dL, unsigned int batch
     m_gradB += dL.second * 1./ batch_size;
     if (m_regulization_rate > 0.)
     {
-        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW() * 1./ batch_size;// * pow(2., -m_n_iteration);
-        m_gradB += pow(m_regulization_rate, -2.) * get_vectorB() * 1./ batch_size;// * pow(2., -m_n_iteration);
+        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW() * 1./ batch_size * pow(2., -m_n_iteration);
+        m_gradB += pow(m_regulization_rate, -2.) * get_vectorB() * 1./ batch_size * pow(2., -m_n_iteration);
     }
 }
 
@@ -336,16 +336,16 @@ void Layer::update_weights(double step)
 
     // Update speed
     double speed_boost = 1.;
-    if (m_n_iteration < 1./(1-m_viscosity_rate))
-        speed_boost = 1./(1-m_viscosity_rate);
+    //if (m_n_iteration < 1./(1-m_viscosity_rate))
+    //    speed_boost = 1./(1-m_viscosity_rate);
 
     m_speedW += speed_boost * (1-m_viscosity_rate) * m_gradW;
     m_speedB += speed_boost * (1-m_viscosity_rate) * m_gradB;
 
     // Update memory
     double memory_boost = 1.;
-    if (m_n_iteration < 1./(1-m_adagrad_rate))
-        memory_boost = 1./(1-m_adagrad_rate);
+    //if (m_n_iteration < 1./(1-m_adagrad_rate))
+    //    memory_boost = 1./(1-m_adagrad_rate);
 
     if (m_adagrad_rate > 0.)
     {
