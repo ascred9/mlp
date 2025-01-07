@@ -40,7 +40,7 @@ LayerDeque::LayerDeque():
         m_kde = std::make_unique<KDE>();
         //m_kde->set_verbose();
     }
-    
+
     if (m_useKS)
     {
         m_ks = std::make_unique<KStest>(0.1, [](double x) {
@@ -162,7 +162,45 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
 
         val += 1e1 * m_kde->get_gradient( idx % batch_size);
     }
-    
+
+    if (m_useBinningZeroMean)
+    {
+        if (idx % batch_size == 0)
+        {
+	    for (auto &layer: m_layers)
+	        layer->m_trainMode = false;
+
+	    for (int i = 0; i < m_num; i++)
+            {
+	        m_means[i] = 0;
+	        m_nums[i] = 0;
+	    }
+
+	    for (unsigned int i = idx; i < idx + batch_size; i++)
+	    {
+	        double simen = output.at(i).at(0);
+		int mid = ((simen + 1) * m_num/2);
+		if (mid == m_num)
+		    mid--;
+
+		m_means[mid] += (calculate(input.at(i)).at(0) - simen);
+		m_nums[mid]++;
+	    }
+
+	    for (int i = 0; i < m_num; i++)
+	    	m_means[i] /= m_nums[i];
+
+	    for (auto &layer: m_layers)
+	        layer->m_trainMode = true;
+        }
+
+        int mid = ((output.at(idx).at(0) + 1) * m_num/2);
+        if (mid == m_num)
+            mid--;
+
+	val += 1e3 * m_means[mid];
+    }
+
     if (m_useKS)
     {
         if (idx % batch_size == 0)

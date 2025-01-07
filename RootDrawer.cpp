@@ -60,7 +60,7 @@ void DrawEvent(Network* net, const std::vector<double>& input)
     NodePrimitive::set_draw_func(std::function<void(const NodePrimitive& node)>(drawNode));
     ConnectionPrimitive::set_draw_func(std::function<void(const ConnectionPrimitive& connection)>(drawConnection));
     drawer.draw_event(input);
-    c->SaveAs(Form("event%d.png", id++));
+    c->SaveAs(Form("pics/event%d.png", id++));
     c->Close();
     gSystem->ProcessEvents();
     delete c;

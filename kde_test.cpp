@@ -24,7 +24,7 @@ int test_kde()
     NetworkPtr net_ptr = std::make_unique<Network>();
     //net_ptr->init_from_file("build/btest_theta3.txt", "build/btest_theta4.txt");
     //net_ptr->init_from_file("build/100_200_perpendicular_v9.txt", "build/100_200_perpendicular_v9.txt");
-    net_ptr->init_from_file("build/test.txt", "build/test.txt");
+    net_ptr->init_from_file("build/test1.txt", "build/test1.txt");
     
     TTree* tph = (TTree*)infile->Get("tph");
     float simen;

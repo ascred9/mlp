@@ -4,8 +4,8 @@ deep 5
 nepoch 0
 loss_func LS
 step 0.001
-topology 5 5 10 5 1
-active_funcs linear lrelu lrelu lrelu linear
+topology 5 5 10 5 1 
+active_funcs linear relu relu relu linear 
 input_transforms
 	normal 4 0 200 95.03 32.23
 	normal 4 0 180 27.55 22.95

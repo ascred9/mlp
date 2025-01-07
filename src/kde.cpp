@@ -15,24 +15,24 @@
 
 KDE::KDE()
 {
-    double sigma = 0.20;
+    double sigma = 0.23;
     double xi = 2 * sqrt(2*log(2));
-    double eta = 0.05;
+    double eta = 1.4e-01;
     double s0 = 2/xi * log(xi*eta/2 + sqrt(1 + pow(xi*eta/2, 2)));
-    m_expected_f = [sigma, eta, s0](double x){double part1 = 1., part2 = 1.;
-                                              if ((x+1)*eta/sigma < 1)
-                                                part1 = std::erf( (s0*s0 - log(1 - (x+1)*eta/sigma)) / (sqrt(2) * s0) );
-                                              if((x-1)*eta/sigma < 1)
-                                                part2 = std::erf( (s0*s0 - log(1 - (x-1)*eta/sigma)) / (sqrt(2) * s0) );
-                                              return 0.25 * (part1 - part2);}; // where I loss 2?
-    m_expected_df = [sigma, eta, s0](double x){double part1 = 0., part2 = 0.;
-                                               if ((x+1)*eta/sigma < 1)
-                                                part1 = -exp(-0.5*pow(log(1-eta*(x+1)/sigma)/s0, 2));
-                                               if ((x-1)*eta/sigma < 1) 
-                                                part2 = -exp(-0.5*pow(log(1-eta*(x-1)/sigma)/s0, 2));
-                                               return 0.5 * eta * exp(-0.5*s0*s0) / (sqrt(2*M_PI) * sigma * s0 ) * (part1 - part2);};
-    //m_expected_f = [sigma](double x){return 0.25 * (std::erf((1-x)/(sqrt(2)*sigma)) + std::erf((1+x)/(sqrt(2)*sigma)));};
-    //m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((1+x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
+    //m_expected_f = [sigma, eta, s0](double x){double part1 = 1., part2 = 1.;
+    //                                          if ((x+1)*eta/sigma < 1)
+    //                                            part1 = std::erf( (s0*s0 - log(1 - (x+1)*eta/sigma)) / (sqrt(2) * s0) );
+    //                                          if((x-1)*eta/sigma < 1)
+    //                                            part2 = std::erf( (s0*s0 - log(1 - (x-1)*eta/sigma)) / (sqrt(2) * s0) );
+    //                                          return 0.25 * (part1 - part2);}; // where I loss 2?
+    //m_expected_df = [sigma, eta, s0](double x){double part1 = 0., part2 = 0.;
+    //                                           if ((x+1)*eta/sigma < 1)
+    //                                            part1 = -exp(-0.5*pow(log(1-eta*(x+1)/sigma)/s0, 2));
+    //                                           if ((x-1)*eta/sigma < 1) 
+    //                                            part2 = -exp(-0.5*pow(log(1-eta*(x-1)/sigma)/s0, 2));
+    //                                           return 0.5 * eta * exp(-0.5*s0*s0) / (sqrt(2*M_PI) * sigma * s0 ) * (part1 - part2);};
+    m_expected_f = [sigma](double x){return 0.25 * (std::erf((1-x)/(sqrt(2)*sigma)) + std::erf((1+x)/(sqrt(2)*sigma)));};
+    m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((1+x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
     //m_expected_f = [sigma](double x){return 1./(sqrt(2*M_PI)*sigma) * exp(-0.5*pow(x/sigma, 2));};
 
     //omp_set_dynamic(0);
@@ -151,7 +151,7 @@ void KDE::recalculate(const std::vector<double>& reco)
         double dp = 0;
         for (auto jt = reco.begin(); jt != reco.end(); ++jt)
         {
-            if (abs(*jt - val) > 3)
+            if (abs(*jt - val) > 5)
                 continue;
 
             int ind = std::distance(reco.begin(), jt);

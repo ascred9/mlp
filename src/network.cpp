@@ -500,14 +500,14 @@ void Network::train_input(const int nepoch, std::vector<std::vector<double>> tra
     	std::array<double, 3> epsilon_before = m_layer_deque.test(test_input, test_output, test_weights);
 
         // Training
-        //unsigned int rn = rd();
-        //std::shuffle(train_input.begin(), train_input.end(), std::mt19937{rn});
-        //std::shuffle(train_output.begin(), train_output.end(), std::mt19937{rn});
-        //std::shuffle(train_weights.begin(), train_weights.end(), std::mt19937{rn});
+        unsigned int rn = rd();
+        std::shuffle(train_input.begin(), train_input.end(), std::mt19937{rn});
+        std::shuffle(train_output.begin(), train_output.end(), std::mt19937{rn});
+        std::shuffle(train_weights.begin(), train_weights.end(), std::mt19937{rn});
         m_layer_deque.train(train_input, train_output, train_weights, batch_size, minibatch_size);
 
         // Testing after
-	    std::array<double, 3> epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
+        std::array<double, 3> epsilon_after = m_layer_deque.test(test_input, test_output, test_weights);
         pop(epsilon_after);
 
         double reduce = std::abs(epsilon_after.at(0) / epsilon_before.at(0));

@@ -34,6 +34,7 @@ void draw_macro(TString filename = "out.root")
     TCanvas* c1 = new TCanvas("neuron_net", "neuron net results", 900, 600);
     c1->Divide(2, 2);
 
+    c1->cd(1)->SetGrid();
     c1->cd(1);
     if (flag)
         tph->Draw("(lxe+csi)/rec - simen:simen", "abs((lxe+csi)/rec - simen)<150");
@@ -42,6 +43,7 @@ void draw_macro(TString filename = "out.root")
     
     
     //c1->cd(2)->Divide(2, 1);
+    c1->cd(2)->SetGrid();//->cd(1);
     c1->cd(2);//->cd(1);
     if (flag)
         tph->Draw("(lxe+csi)/rec - simen>>h2(400)", "abs((lxe+csi)/rec - simen)<150");
@@ -56,8 +58,8 @@ void draw_macro(TString filename = "out.root")
     logGaus->SetParameter(1, 0);
     logGaus->SetParameter(2, 30);
     logGaus->SetParameter(3, 0.1);
-    gROOT->ProcessLine("h2->Fit(\"logGaus\", \"\", \"\", -30, 30)");
-    gROOT->ProcessLine("h2origin->Fit(\"logGaus\", \"\", \"\", -40, 20)");
+    gROOT->ProcessLine("h2->Fit(\"logGaus\", \"\", \"\", -50, 30)");
+    gROOT->ProcessLine("h2origin->Fit(\"logGaus\", \"\", \"\", -50, 20)");
 
     //c1->cd(2)->cd(2);
     //if (flag)
@@ -66,16 +68,19 @@ void draw_macro(TString filename = "out.root")
     //    tph->Draw("pow(rec - simen,2):simen", "abs(rec - simen)<150");
     
     c1->cd(3)->Divide(1, 2);
+    c1->cd(3)->cd(1)->SetGrid();
     c1->cd(3)->cd(1);
     if (flag)
         tph->Draw("(lxe+csi)/rec - simen:abs(th-3.1415/2)", "abs((lxe+csi)/rec - simen)<150");
     else
         tph->Draw("rec - simen:abs(th-3.1415/2)", "abs(rec - simen)<150");
 
+    c1->cd(3)->cd(2)->SetGrid();
     c1->cd(3)->cd(2);
     tnet->Draw("mean_loss:nepoch", "nepoch>2", "L");
 
     c1->cd(4)->Divide(1, 2);
+    c1->cd(4)->cd(1)->SetGrid();
     c1->cd(4)->cd(1);
     TPad* pad = new TPad("pad4", "pad4", 0, 0, 1, 1);
     pad->Draw();
@@ -88,6 +93,7 @@ void draw_macro(TString filename = "out.root")
 
     c1->cd(4)->cd(2);
     TCanvas* c2 = new TCanvas();
+    c2->cd()->SetGrid();
     c2->cd();
     if (flag)
     {
@@ -95,16 +101,19 @@ void draw_macro(TString filename = "out.root")
     }
     else
     {
-        tph->Draw("rec>>h5(200, 200, 100, 100)");
+        tph->Draw("rec>>h5(300, 0, 300)");
     }
     gROOT->ProcessLine("h5->SetLineColor(kRed)");
     tph->Draw("simen", "", "same");
     tph->Draw("en", "", "same");
 
-    double sigma = 0.20 * 50;
+    double sigma = 0.2 * 50;
     double xi = 2 * sqrt(2*log(2));
-    double eta = 0.15;
+    double eta = 1.5e-01;
     double s0 = 2/xi * log(xi*eta/2 + sqrt(1 + pow(xi*eta/2, 2)));
+    //auto expected_f = [sigma](double* xx, double* par){
+    //    double x = xx[0] - 150;
+    //    return 0.25 * par[0] * (std::erf((50-x)/(sqrt(2)*sigma)) + std::erf((50+x)/(sqrt(2)*sigma)));};
     auto expected_f = [sigma, eta, s0](double* xx, double* par){
                                               double x = xx[0] - 150;
                                               double part1 = 1., part2 = 1.;

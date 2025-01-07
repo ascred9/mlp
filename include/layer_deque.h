@@ -72,6 +72,11 @@ private:
     bool m_useKS = false;
     std::unique_ptr<KStest> m_ks;
 
+    bool m_useBinningZeroMean = false;
+    static const int m_num = 20;
+    double m_means[m_num];
+    int m_nums[m_num];
+
     bool m_neighbourSum = false;
     int m_kNeighbours = 10;
     double m_lastResByNeighbours = 0;
