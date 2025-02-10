@@ -28,6 +28,9 @@
 typedef Eigen::Matrix<double, 1, Eigen::Dynamic> Vector;
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 
+#include "random_generator.h"
+
+
 class KDE
 {
     std::vector<double> m_grads;
@@ -38,10 +41,11 @@ class KDE
     std::vector<std::vector<double>> m_hist;
 public:
     std::function<double(double)> m_expected_f, m_expected_df;
-    std::vector<double> m_f;
-    KDE();
-    void recalculate(const std::vector<double>& reco);
+    std::vector<double> m_f, m_gen;
+    KDE(int type = 0);
+    void recalculate_exclusive(const std::vector<double>& reco);
     void fast_recalculate(const std::vector<double>& reco); // A poorer approxamitaion but fast
+    void recalculate_inclusive(const std::vector<double>& data, const std::vector<double>& reco);
     double get_gradient(unsigned int id) const {return m_grads.at(id);};
     double get_kl() {return m_kl;};
     double get_dkl() {return m_dkl;};

@@ -28,6 +28,8 @@ void draw_macro(TString filename = "out.root")
     }
     
     TTree* tph = (TTree*)infile->Get("tph");
+    float simen;
+    tph->SetBranchAddress("simen", &simen);
     TTree* tnet = (TTree*)infile->Get("tnet");
 
 
@@ -114,20 +116,37 @@ void draw_macro(TString filename = "out.root")
     //auto expected_f = [sigma](double* xx, double* par){
     //    double x = xx[0] - 150;
     //    return 0.25 * par[0] * (std::erf((50-x)/(sqrt(2)*sigma)) + std::erf((50+x)/(sqrt(2)*sigma)));};
+    //auto expected_f = [sigma, eta, s0](double* xx, double* par){
     auto expected_f = [sigma, eta, s0](double* xx, double* par){
                                               double x = xx[0] - 150;
+                                              double eta = par[2];
+                                              double sigma = par[1];
+                                              double xi = 2 * sqrt(2*log(2));
+                                              double s0 = 2/xi * log(xi*eta/2 + sqrt(1 + pow(xi*eta/2, 2)));
                                               double part1 = 1., part2 = 1.;
                                               if ((x+50)*eta/sigma < 1)
                                                 part1 = std::erf( (s0*s0 - log(1 - (x+50)*eta/sigma)) / (sqrt(2) * s0) );
                                               if((x-50)*eta/sigma < 1)
                                                 part2 = std::erf( (s0*s0 - log(1 - (x-50)*eta/sigma)) / (sqrt(2) * s0) );
                                               return 0.25 * par[0] * (part1 - part2);};
-    TF1* f = new TF1("fexpected", expected_f, 50, 250, 1);
-    f->SetParameter(0, 8000);
+    TF1* f = new TF1("fexpected", expected_f, 50, 250, 3);
+    f->SetParameter(0, 2000);
+    f->SetParameter(1, 10);
+    f->SetParameter(2, 0.15);
     gROOT->ProcessLine("h5->Fit(\"fexpected\")");
     f->SetLineStyle(kDashed);
     f->SetLineColor(kBlack);
     f->Draw("same");
+    
+    TH1D* hist_random = new TH1D("hist_random", "hist_random", 300, 0, 300);
+    NovosibirskGenerator gen(0, 12.71, 0.1747);
+    for (int i = 0; i < tph->GetEntries(); i++)
+    {
+        tph->GetEntry(i);
+        hist_random->Fill(simen + gen.generate());
+    }
+    hist_random->SetLineColor(kGreen);
+    hist_random->Draw("same");
 
     if (false)
     {

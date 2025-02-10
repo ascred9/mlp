@@ -37,7 +37,8 @@ LayerDeque::LayerDeque():
 
     if (m_useKDE)
     {
-        m_kde = std::make_unique<KDE>();
+        m_kde_local = std::make_unique<KDE>(1);
+        m_kde_global = std::make_unique<KDE>(0);
         //m_kde->set_verbose();
     }
 
@@ -147,20 +148,24 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
                 layer->m_trainMode = false;
 
             // Fill array
-            std::vector<double> reco;
+            std::vector<double> data, reco_local, reco_global;
             for (unsigned int i = idx; i < idx + batch_size; i++)
             {
-                //reco.push_back(calculate(input.at(i)).at(0) - output.at(i).at(0));
-                reco.push_back(calculate(input.at(i)).at(0));
+                data.push_back(output.at(i).at(0));
+                reco_local.push_back(calculate(input.at(i)).at(0) - output.at(i).at(0));
+                reco_global.push_back(calculate(input.at(i)).at(0));
             }
     
-            m_kde->recalculate(reco);
+            //m_kde_local->recalculate_exclusive(reco_local);
+            m_kde_global->recalculate_exclusive(reco_global);
+            //m_kde_global->recalculate_inclusive(data, reco_global);
     
             for (auto &layer: m_layers)
                 layer->m_trainMode = true;
         }
 
-        val += 1e1 * m_kde->get_gradient( idx % batch_size);
+        //val += 1e1 * m_kde_local->get_gradient( idx % batch_size);
+        val += 1e-1 * m_kde_global->get_gradient( idx % batch_size);
     }
 
     if (m_useBinningZeroMean)
@@ -707,6 +712,37 @@ void LayerDeque::set_loss_func(const std::string& loss_type)
         m_floss = [this](const Vector& real, const Vector& output){return 0.25 * (output.array().pow(2) - real.array().pow(2) - 0.04).pow(2)/ m_outsize;};
         m_fploss = [this](const Vector& real, const Vector& output){return (output.array().pow(2)-real.array().pow(2) -0.04) * output.array() / m_outsize;};
     }
+    else if (m_loss_type == "NSK")
+    {
+        m_floss = [this](const Vector& real, const Vector& output){
+            auto nsk = [](double x, double y) {
+                double eta = 0.13;
+                double sigma = 0.2;//736;// + 0.0038 * y;
+                double v = 1 - eta * (y - x) / sigma;
+                if (v <= 0 )
+                    return 0.;
+
+                return 0.5 * pow(log(v), 2);
+            };
+
+            return output.array().binaryExpr(real.array(), nsk) / m_outsize;
+        };
+
+        m_fploss = [this](const Vector& real, const Vector& output){
+            auto dnsk = [](double x, double y)
+            {
+                double eta = 0.13;
+                double sigma = 0.2;//736;// + 0.0038 * y;
+                double v = 1 - eta * (y - x) / sigma;
+                if (v <= 0 )
+                    return 0.;
+
+                return log(v) / v * eta / sigma;
+            };
+ 
+            return output.array().binaryExpr(real.array(), dnsk) / m_outsize;
+        };
+    }
     else
         throw std::invalid_argument("this loss function isn't implemented");
 }
@@ -897,7 +933,7 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
     }
     
     if (m_useKDE)
-        std::cout << "KL: " << m_kde->get_kl() << " -> grad: " << m_kde->get_dkl() << std::endl;
+        std::cout << "KL: " << m_kde_global->get_kl() << " -> grad: " << m_kde_global->get_dkl() << std::endl;
 
     if (m_useKS)
         std::cout << "KS: " << m_ks->get_sup() << " x0: " << m_ks->get_x0() << std::endl;

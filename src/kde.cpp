@@ -13,27 +13,32 @@
 #include "../include/kde.h"
 
 
-KDE::KDE()
+KDE::KDE(int type)
 {
-    double sigma = 0.23;
+    double sigma = 0.2;
     double xi = 2 * sqrt(2*log(2));
-    double eta = 1.4e-01;
+    double eta = 1.73e-01;
     double s0 = 2/xi * log(xi*eta/2 + sqrt(1 + pow(xi*eta/2, 2)));
-    //m_expected_f = [sigma, eta, s0](double x){double part1 = 1., part2 = 1.;
-    //                                          if ((x+1)*eta/sigma < 1)
-    //                                            part1 = std::erf( (s0*s0 - log(1 - (x+1)*eta/sigma)) / (sqrt(2) * s0) );
-    //                                          if((x-1)*eta/sigma < 1)
-    //                                            part2 = std::erf( (s0*s0 - log(1 - (x-1)*eta/sigma)) / (sqrt(2) * s0) );
-    //                                          return 0.25 * (part1 - part2);}; // where I loss 2?
-    //m_expected_df = [sigma, eta, s0](double x){double part1 = 0., part2 = 0.;
-    //                                           if ((x+1)*eta/sigma < 1)
-    //                                            part1 = -exp(-0.5*pow(log(1-eta*(x+1)/sigma)/s0, 2));
-    //                                           if ((x-1)*eta/sigma < 1) 
-    //                                            part2 = -exp(-0.5*pow(log(1-eta*(x-1)/sigma)/s0, 2));
-    //                                           return 0.5 * eta * exp(-0.5*s0*s0) / (sqrt(2*M_PI) * sigma * s0 ) * (part1 - part2);};
-    m_expected_f = [sigma](double x){return 0.25 * (std::erf((1-x)/(sqrt(2)*sigma)) + std::erf((1+x)/(sqrt(2)*sigma)));};
-    m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((1+x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
-    //m_expected_f = [sigma](double x){return 1./(sqrt(2*M_PI)*sigma) * exp(-0.5*pow(x/sigma, 2));};
+    m_expected_f = [sigma, eta, s0](double x){double part1 = 1., part2 = 1.;
+                                              if ((x+1)*eta/sigma < 1)
+                                                part1 = std::erf( (s0*s0 - log(1 - (x+1)*eta/sigma)) / (sqrt(2) * s0) );
+                                              if((x-1)*eta/sigma < 1)
+                                                part2 = std::erf( (s0*s0 - log(1 - (x-1)*eta/sigma)) / (sqrt(2) * s0) );
+                                              return 0.25 * (part1 - part2);}; // where I loss 2?
+    m_expected_df = [sigma, eta, s0](double x){double part1 = 0., part2 = 0.;
+                                               if ((x+1)*eta/sigma < 1)
+                                                part1 = -exp(-0.5*pow(log(1-eta*(x+1)/sigma)/s0, 2));
+                                               if ((x-1)*eta/sigma < 1) 
+                                                part2 = -exp(-0.5*pow(log(1-eta*(x-1)/sigma)/s0, 2));
+                                               return 0.5 * eta * exp(-0.5*s0*s0) / (sqrt(2*M_PI) * sigma * s0 ) * (part1 - part2);};
+    if (type == 0)
+        //m_expected_f = [sigma](double x){return 0.25 * (std::erf((1-x)/(sqrt(2)*sigma)) + std::erf((1+x)/(sqrt(2)*sigma)));};
+
+    if (type == 1)
+        m_expected_f = [sigma](double x){return 1./(sqrt(2*M_PI)*sigma) * exp(-0.5*pow(x/sigma, 2));};
+        
+    //m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((1+x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
+
 
     //omp_set_dynamic(0);
     //int num = omp_get_max_threads();
@@ -41,7 +46,7 @@ KDE::KDE()
     //omp_set_num_threads(num);
 }
 
-void KDE::recalculate(const std::vector<double>& reco)
+void KDE::recalculate_exclusive(const std::vector<double>& reco)
 {
     m_grads.clear();
     m_f.clear();
@@ -162,6 +167,133 @@ void KDE::recalculate(const std::vector<double>& reco)
             //double part = dgaus(val, *jt) / pj * (m_logs.at(ind));// + 1); // Jef
             double part = dgaus(val, *jt) / pj * (m_logs.at(ind) + 1); 
             dp += part;
+        }
+
+        dp /= count;
+
+        m_grads.push_back(dp);
+
+        m_dkl += dp;
+    }
+    end = clock();
+    if (m_verbose)
+        std::cout << "2nd part: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
+
+    if (m_verbose)
+    {
+        std::cout << "m: " << mean << std::endl;
+        std::cout << "d: " << dev << std::endl;
+        std::cout << "h: " << m_h << std::endl;
+        std::cout << "kl: " << m_kl << std::endl;
+        std::cout << "dkl: " << m_dkl << std::endl << std::endl;
+    }
+}
+
+void KDE::recalculate_inclusive(const std::vector<double>& data, const std::vector<double>& reco)
+{
+    m_grads.clear();
+    m_f.clear();
+
+    if (reco.size() == 0)
+        throw std::invalid_argument("kde isn't implemented for size less than 1");
+
+    // Calculate mean
+    int count = 0;
+    double mean = 0;
+    for (auto it = reco.begin(); it != reco.end(); ++it)
+    {
+        //if (abs(*it) > 3)
+        //    continue;
+
+        mean += *it;
+        count++;
+    }
+    
+    mean /= count;
+
+    // Calculate dev
+    double dev = 0;
+    for (auto it = reco.begin(); it != reco.end(); ++it)
+    {
+        //if (abs(*it) > 3)
+        //    continue;
+
+        dev += pow((*it - mean), 2);
+    }
+
+    dev /= (count - 1);
+    dev = sqrt(dev);
+
+    // Calculate h
+    m_h = pow(4. / (3.*count), 0.2) * dev * 0.25;
+ 
+    // Create gaus
+    //auto gaus = [&](double x, double y){ return 1. / (sqrt(2 * M_PI) * m_h * dev) * exp(-0.5*pow((x - y)/(m_h * dev), 2)); };
+    //auto dgaus = [&](double x, double y){ return -1. / (sqrt(2 * M_PI) * m_h * dev) * exp(-0.5*pow((x - y)/(m_h * dev), 2)) * (x-y)/pow(m_h * dev, 2); };
+
+    auto gaus = [&](double x, double y){ return 1 - 0.5 * pow((x - y)/(m_h*dev), 2) > 0 ? 1. / (sqrt(2 * M_PI) * m_h * dev) * (1 - 0.5 * pow((x - y)/(m_h*dev), 2)) : 0;};
+    auto dgaus = [&](double x, double y){ return 1 - 0.5 * pow((x - y)/(m_h*dev), 2) > 0 ? -(x-y)/pow(m_h * dev, 2) : 0;};
+
+    m_kl = 0;
+    m_dkl = 0;
+
+    clock_t start, end;
+    start = clock();
+    m_f.resize(data.size(), 0);
+
+    m_gen.clear();
+    NovosibirskGenerator generator(0, 0.1, 0.17);
+
+    int reco_size = reco.size();
+    int data_size = data.size();
+    for (int i = 0; i < data_size; i++)
+    {
+        double val = data.at(i) + generator.generate();
+        m_gen.push_back(val);
+
+        double p = 0;//, q = m_expected_f(val);
+
+        for (auto jt = reco.begin(); jt != reco.end(); ++jt)
+        {
+            if (abs(*jt - val) > 3)
+                continue;
+
+            p += gaus(val, *jt);
+        }
+
+        p /= count;
+        m_f.at(i) = p;
+        //if (p == 0)
+        //    std::cout << val << " " << p << std::endl;
+
+        double clog = p == 0 ? -1e+5 : log(p);
+        m_kl -= clog;
+    }
+
+    m_kl /= count;
+    end = clock();
+    if (m_verbose)
+        std::cout << "1s part: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
+
+    start = clock();
+    m_grads.reserve(data.size());
+    for (int i = 0; i < reco_size; i++)
+    {
+        double val = reco.at(i);
+
+        double dp = 0;
+        for (auto j = 0; j < data_size; ++j)
+        {
+            double valx = m_gen.at(j);
+            if (abs(valx - val) > 5)
+                continue;
+
+            double pj = m_f.at(j);
+            double part = pj != 0 ? -dgaus(val, valx) / pj : (val - valx);// * 1e5;
+            dp += part;
+
+            //if (valx > 0.94 && val > 0.9)
+            //    std::cout << valx << " " << val << " " << pj << " " << part << std::endl;
         }
 
         dp /= count;

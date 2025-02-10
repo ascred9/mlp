@@ -57,7 +57,7 @@ int test_kde()
         sim.push_back((simen-150)/50.);
     }
         
-    std::vector<double> reco;
+    std::vector<double> reco, data;
     for (const auto& in: input)
     {
         auto res = net_ptr->get_result(in);
@@ -69,7 +69,7 @@ int test_kde()
     start = clock();
     KDE kde;
     kde.set_verbose();
-    kde.recalculate(reco);
+    kde.recalculate_inclusive(sim, reco);
     end = clock();
     std::cout << "Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
 
@@ -102,13 +102,13 @@ int test_kde()
             continue;
         graph_sim->AddPoint(rec, kde.m_expected_f(rec));
         graph_dsim->AddPoint(rec, kde.m_expected_df(rec));
-        graph_exp->AddPoint(rec, kde.m_f.at(i));
-        gr_dep->AddPoint(sim.at(i), rec - sim.at(i));
+        graph_exp->AddPoint(kde.m_gen.at(i), kde.m_f.at(i));
+        gr_dep->AddPoint(kde.m_gen.at(i), rec - sim.at(i));
         hist_sim->Fill(sim.at(i));
         hist_exp->Fill(rec);
         gr_kde->AddPoint(rec, kde.get_gradient(i));
-        gr_log->AddPoint(rec, log(kde.m_f.at(i)/kde.m_expected_f(rec)));
-        gr_plog->AddPoint(rec, kde.m_f.at(i)*log(kde.m_f.at(i)/kde.m_expected_f(rec)));
+        gr_log->AddPoint(kde.m_gen.at(i), log(kde.m_f.at(i)/kde.m_expected_f(kde.m_gen.at(i))));
+        gr_plog->AddPoint(kde.m_gen.at(i), kde.m_f.at(i)*log(kde.m_f.at(i)/kde.m_expected_f(kde.m_gen.at(i))));
     
         KL += log(kde.m_f.at(i)/kde.m_expected_f(rec));
     }
