@@ -44,22 +44,14 @@ int process(TString filename)
     tph->SetBranchAddress("rho",	&rho);
 
     //NetworkPtr net_ptr = std::make_unique<Network>();
-    //BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
+    BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
     //GradientNetworkPtr net_ptr = std::make_unique<GradientNetwork>();
-    //net_ptr->create(5, 1, {5, 10}, "build/bnetwork.txt"); return 1;
-    //net_ptr->init_from_file("build/bnetwork_theta4.txt", "build/bnetwork_theta5.txt");
-    //net_ptr->init_from_file("build/bnetwork.txt", "build/btest_theta.txt");
-    //net_ptr->init_from_file("build/btest_theta.txt", "build/btest_theta.txt");
-    //net_ptr->init_from_file("build/100_200_perpendicular_v4.txt", "build/100_200_perpendicular_v4.txt");
-    //net_ptr->init_from_file("build/btest_theta.txt", "build/btest_theta2.txt");
-    //net_ptr->init_from_file("build/bseam.txt", "build/btest.txt");
-    //net_ptr->init_from_file("build/btest1.txt", "build/btest2.txt");
-    NetworkPtr net_ptr = std::make_unique<Network>();
+    //net_ptr->create(5, 1, {5, 10, 5}, "build/bnetwork.txt"); return 1;
+    net_ptr->init_from_file("build/bnetwork.txt", "build/btest1.txt");
+    //NetworkPtr net_ptr = std::make_unique<Network>();
     //net_ptr->create(5, 1, {5, 10, 5}, "build/test.txt"); return 1;
-    net_ptr->init_from_file("build/test1.txt", "build/test1.txt");
+    //net_ptr->init_from_file("build/test1.txt", "build/test1.txt");
     //net_ptr->init_from_file("build/test.txt", "build/test.txt");
-    //net_ptr->init_from_file("build/500_1000_perpendicular.txt", "build/test2.txt");
-    //net_ptr->init_from_file("build/test8.txt", "build/test9.txt");
 
     if (net_ptr == nullptr)
     {

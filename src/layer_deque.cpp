@@ -819,7 +819,7 @@ std::array<double, 3> LayerDeque::test(const std::vector<std::vector<double>>& i
     }
     stddev = output.size() > 1? stddev / (output.size() - 1): 0;
 
-    return {mean + get_regulization(), sqrt(stddev), mean};
+    return {mean + get_regulization()/output.size(), sqrt(stddev), mean};
 }
 
 void LayerDeque::train(const std::vector<std::vector<double>>& input, const std::vector<std::vector<double>>& output,
@@ -887,6 +887,7 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
     }
 
     // Calculate gradients and update weights
+    int M = input.size() / batch_size;
     for (unsigned int idx = 0; idx < input.size(); ++idx)
     {
         if (m_layers.front()->size() != input.at(idx).size())
@@ -910,17 +911,19 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
 
             std::vector<std::pair<Matrix, Vector>> dL( std::move(get_gradient(input.at(idx), out, weights.at(idx))) );
 
+            // Make parallel
             for (unsigned idl = 0; idl < m_layers.size() - 1; ++idl)
             {
                 //Calculate summary layer gradient with likelihood and regulization
-                dL.at(idl).first *= 1./minibatch_size;
-                dL.at(idl).second *= 1./minibatch_size;
-                m_layers.at(idl)->add_gradient(dL.at(idl), batch_size);
+                dL.at(idl).first *= M;
+                dL.at(idl).second *= M;
+                m_layers.at(idl)->add_gradient(dL.at(idl), batch_size * minibatch_size * M);
             }
         }
 
         if ( (idx + 1) % batch_size == 0)
         {
+            // Make parallel
             for (unsigned int idl = 0; idl < m_layers.size() - 1; ++idl)
             {
                 m_layers.at(idl)->update_weights(m_step);

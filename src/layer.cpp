@@ -221,7 +221,7 @@ double Layer::get_regulization() const
 
     double regulization = 0.;
     regulization += m_matrixW.array().pow(2).sum();
-    regulization += m_vectorB.array().pow(2).sum();
+    //regulization += m_vectorB.array().pow(2).sum();
     regulization *= pow(m_regulization_rate, -2) * 0.5;
     return regulization;
 
@@ -235,8 +235,8 @@ void Layer::add_gradient(const std::pair<Matrix, Vector>& dL, unsigned int batch
     m_gradB += dL.second * 1./ batch_size;
     if (m_regulization_rate > 0.)
     {
-        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW() * 1./ batch_size * pow(2., -m_n_iteration);
-        m_gradB += pow(m_regulization_rate, -2.) * get_vectorB() * 1./ batch_size * pow(2., -m_n_iteration);
+        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW() * 1./ batch_size;// * pow(2., -m_n_iteration);
+        m_gradB += pow(m_regulization_rate, -2.) * get_vectorB() * 1./ batch_size;// * pow(2., -m_n_iteration);
     }
 }
 

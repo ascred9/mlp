@@ -118,8 +118,8 @@ double BayesianLayer::get_regulization() const
     regulization += m_matrixW.array().pow(2).sum() + m_Wsigma(m_devMatrixW).array().pow(2).sum();
     regulization += m_vectorB.array().pow(2).sum() + m_Bsigma(m_devVectorB).array().pow(2).sum();
     regulization *= pow(m_regulization_rate, -2) * 0.5;
-    //regulization += log(m_Wsigma(m_devMatrixW).array().inverse() * m_regulization_rate).sum();
-    //regulization += log(m_Bsigma(m_devVectorB).array().inverse() * m_regulization_rate).sum();
+    regulization -= log(m_Wsigma(m_devMatrixW).array() / m_regulization_rate).sum();
+    regulization -= log(m_Bsigma(m_devVectorB).array() / m_regulization_rate).sum();
     return regulization;
 }
 
@@ -130,10 +130,10 @@ void BayesianLayer::add_gradient(const std::pair<Matrix, Vector>& dL, unsigned i
     m_gradDB.array() += m_epsilonB.array() * (dL.second).array() * m_pBsigma(m_devVectorB).array() * 1./ batch_size;
     if (m_regulization_rate > 0.)
     {
-        m_gradDW.array() += (pow(m_regulization_rate, -2.) * m_Wsigma(m_devMatrixW).array())// - m_Wsigma(m_devMatrixW).array().inverse())
-            * m_pWsigma(m_devMatrixW).array() * 1./ batch_size * pow(2., -m_n_iteration);
-        m_gradDB.array() += (pow(m_regulization_rate, -2.) * m_Bsigma(m_devVectorB).array())// - m_Bsigma(m_devVectorB).array().inverse())
-            * m_pBsigma(m_devVectorB).array() * 1./ batch_size * pow(2., -m_n_iteration);
+        m_gradDW.array() += (pow(m_regulization_rate, -2.) * m_Wsigma(m_devMatrixW).array() - m_Wsigma(m_devMatrixW).array().inverse())
+            * m_pWsigma(m_devMatrixW).array() * 1./ batch_size;// * pow(2., -m_n_iteration);
+        m_gradDB.array() += (pow(m_regulization_rate, -2.) * m_Bsigma(m_devVectorB).array() - m_Bsigma(m_devVectorB).array().inverse())
+            * m_pBsigma(m_devVectorB).array() * 1./ batch_size;// * pow(2., -m_n_iteration);
     }
 }
 
@@ -161,18 +161,20 @@ void BayesianLayer::update()
         return;
 
     // Generate random matrix epsilon for W and update tempMatrixW
-    std::vector<double> vW(m_size * m_out_size);
-    std::generate(vW.begin(), vW.end(), [&]() {return m_gaus(m_gen);});
+    //std::vector<double> vW(m_size * m_out_size);
+    //std::generate(vW.begin(), vW.end(), [&]() {return m_gaus(m_gen);});
 
-    m_epsilonW = Eigen::Map<Matrix, Eigen::Aligned>(vW.data(), m_size, m_out_size);
+    //m_epsilonW = Eigen::Map<Matrix, Eigen::Aligned>(vW.data(), m_size, m_out_size);
+    m_epsilonW = Matrix::NullaryExpr(m_size, m_out_size, [&](){return m_gaus(m_gen);});
     m_tempMatrixW = m_matrixW.array()
         + m_epsilonW.array() * m_Wsigma(m_devMatrixW).array();
 
     // Generate random matrix epsilon for B and update tempMatrixB
-    std::vector<double> vB(m_out_size);
-    std::generate(vB.begin(), vB.end(), [&]() {return m_gaus(m_gen);});
+    //std::vector<double> vB(m_out_size);
+    //std::generate(vB.begin(), vB.end(), [&]() {return m_gaus(m_gen);});
 
-    m_epsilonB = Eigen::Map<Vector, Eigen::Aligned>(vB.data(), m_out_size);
+    //m_epsilonB = Eigen::Map<Vector, Eigen::Aligned>(vB.data(), m_out_size);
+    m_epsilonB = Vector::NullaryExpr(m_out_size, [&](){return m_gaus(m_gen);});
     m_tempVectorB = m_vectorB.array()
         + m_epsilonB.array() * m_Bsigma(m_devVectorB).array();
 }
@@ -230,7 +232,7 @@ void BayesianLayer::update_weights(double step)
     m_speedDW *= m_viscosity_rate;
     m_speedDB *= m_viscosity_rate;
 
-    // Decrease memory fot the next iteration
+    // Decrease memory for the next iteration
     if (m_adagrad_rate > 0.)
     {
         m_memoryW  *= m_adagrad_rate;

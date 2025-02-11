@@ -65,7 +65,7 @@ private:
     bool m_useZeroSlope = false;
     std::vector<std::array<double, 4>> m_ls_data;
 
-    bool m_useKDE = true;
+    bool m_useKDE = false;
     std::unique_ptr<KDE> m_kde_local;
     std::unique_ptr<KDE> m_kde_global;
 
