@@ -24,7 +24,7 @@ int test_kde()
     NetworkPtr net_ptr = std::make_unique<Network>();
     //net_ptr->init_from_file("build/btest_theta3.txt", "build/btest_theta4.txt");
     //net_ptr->init_from_file("build/100_200_perpendicular_v9.txt", "build/100_200_perpendicular_v9.txt");
-    net_ptr->init_from_file("build/test1.txt", "build/test1.txt");
+    net_ptr->init_from_file("build/btest2.txt", "build/btest2.txt");
     
     TTree* tph = (TTree*)infile->Get("tph");
     float simen;
@@ -69,7 +69,12 @@ int test_kde()
     start = clock();
     KDE kde;
     kde.set_verbose();
-    kde.recalculate_inclusive(sim, reco);
+    bool exclusive = true;
+    if (exclusive)
+        kde.fast_recalculate(reco);//kde.recalculate_exclusive(reco);
+    else
+        kde.recalculate_inclusive(sim, reco);
+
     end = clock();
     std::cout << "Timedelta: " << std::setprecision(9) << double(end-start) / double(CLOCKS_PER_SEC) << std::setprecision(9) << " sec" << std::endl;
 
@@ -100,15 +105,27 @@ int test_kde()
         double rec = reco.at(i);
         if (abs(rec) > 2)
             continue;
+
+        double x = 0;
+        if (exclusive)
+            x = rec;
+        else
+            x = kde.m_gen.at(i);
+
         graph_sim->AddPoint(rec, kde.m_expected_f(rec));
         graph_dsim->AddPoint(rec, kde.m_expected_df(rec));
-        graph_exp->AddPoint(kde.m_gen.at(i), kde.m_f.at(i));
-        gr_dep->AddPoint(kde.m_gen.at(i), rec - sim.at(i));
+        graph_exp->AddPoint(x, kde.m_f.at(i));
+
+        if (exclusive)
+            gr_dep->AddPoint(sim.at(i), rec - sim.at(i));
+        else
+            gr_dep->AddPoint(x, rec - sim.at(i));
+
         hist_sim->Fill(sim.at(i));
         hist_exp->Fill(rec);
         gr_kde->AddPoint(rec, kde.get_gradient(i));
-        gr_log->AddPoint(kde.m_gen.at(i), log(kde.m_f.at(i)/kde.m_expected_f(kde.m_gen.at(i))));
-        gr_plog->AddPoint(kde.m_gen.at(i), kde.m_f.at(i)*log(kde.m_f.at(i)/kde.m_expected_f(kde.m_gen.at(i))));
+        gr_log->AddPoint(x, log(kde.m_f.at(i)/kde.m_expected_f(x)));
+        gr_plog->AddPoint(x, kde.m_f.at(i)*log(kde.m_f.at(i)/kde.m_expected_f(x)));
     
         KL += log(kde.m_f.at(i)/kde.m_expected_f(rec));
     }

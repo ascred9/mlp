@@ -47,7 +47,8 @@ int process(TString filename)
     BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
     //GradientNetworkPtr net_ptr = std::make_unique<GradientNetwork>();
     //net_ptr->create(5, 1, {5, 10, 5}, "build/bnetwork.txt"); return 1;
-    net_ptr->init_from_file("build/bnetwork.txt", "build/btest1.txt");
+    //net_ptr->init_from_file("build/bnetwork.txt", "build/btest1.txt");
+    net_ptr->init_from_file("build/btest1.txt", "build/btest2.txt");
     //NetworkPtr net_ptr = std::make_unique<Network>();
     //net_ptr->create(5, 1, {5, 10, 5}, "build/test.txt"); return 1;
     //net_ptr->init_from_file("build/test1.txt", "build/test1.txt");
@@ -66,9 +67,9 @@ int process(TString filename)
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::normal_distribution<> gaus(0., 100.0);
 
-    int Nepoch = 32;//94;
+    int Nepoch = 94;
     int Nentries = tph->GetEntries();
-    int batch_size = 1e3;
+    int batch_size = 1e4;
     int minibatch_size = 3;
     double T = .5;
     std::vector<std::vector<double>> in, out, weights;

@@ -157,7 +157,8 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
             }
     
             //m_kde_local->recalculate_exclusive(reco_local);
-            m_kde_global->recalculate_exclusive(reco_global);
+            //m_kde_global->recalculate_exclusive(reco_global);
+            m_kde_global->fast_recalculate(reco_global);
             //m_kde_global->recalculate_inclusive(data, reco_global);
     
             for (auto &layer: m_layers)
@@ -165,7 +166,7 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
         }
 
         //val += 1e1 * m_kde_local->get_gradient( idx % batch_size);
-        val += 1e-1 * m_kde_global->get_gradient( idx % batch_size);
+        val += 1e1 * m_kde_global->get_gradient( idx % batch_size);
     }
 
     if (m_useBinningZeroMean)

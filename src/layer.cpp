@@ -161,6 +161,63 @@ void Layer::set_func(std::string name)
         m_f = [sigma](double x){return 1./(sqrt(2*3.1415)*sigma) * exp(-(x*x)/(2*sigma*sigma));};
         m_fp = [sigma](double x){return -x/(sqrt(2*3.1415)*pow(sigma, 3)) * exp(-(x*x)/(2*sigma*sigma));};
     }
+    else if (name == "swish")
+    {
+        //x * sigmoid(x)
+        m_f =[](double x){
+            if (x > 0)
+            {
+                double em = std::exp(-x);
+                return x / (1. + em);
+            }
+            else
+            {
+                double ep = std::exp(x);
+                return x * ep / (1. + ep);
+            }
+        };
+        m_fp = [](double x){
+            double sigma;
+            if (x > 0)
+            {
+                double em = std::exp(-x);
+                sigma = 1. / (1. + em);
+            }
+            else
+            {
+                double ep = std::exp(x);
+                sigma = ep / (1. + ep);
+            }
+            return sigma + x * sigma * (1 - sigma);
+        };
+    }
+    else if (name == "elu")
+    {
+        m_f = [](double x){
+            if (x > 0)
+                return x;
+            else
+                return 0.01 * (std::exp(x) - 1);
+        };
+
+        m_fp = [](double x){
+            if (x > 0)
+                return 1.;
+            else
+                return 0.01 * std::exp(x);
+        };
+    }
+    else if (name == "softplus")
+    {
+        m_f = [](double x){
+            return std::log(1 + std::exp(x));
+        };
+
+        m_fp = [](double x){
+            double e = std::exp(x);
+            return e/(1 + e);
+        };
+    }
 }
 
 void Layer::set_matrixW(const std::vector<double>& weights)
@@ -235,8 +292,8 @@ void Layer::add_gradient(const std::pair<Matrix, Vector>& dL, unsigned int batch
     m_gradB += dL.second * 1./ batch_size;
     if (m_regulization_rate > 0.)
     {
-        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW() * 1./ batch_size;// * pow(2., -m_n_iteration);
-        m_gradB += pow(m_regulization_rate, -2.) * get_vectorB() * 1./ batch_size;// * pow(2., -m_n_iteration);
+        m_gradW += pow(m_regulization_rate, -2.) * get_matrixW() * 1./ batch_size * pow(2., -m_n_iteration);
+        //m_gradB += pow(m_regulization_rate, -2.) * get_vectorB() * 1./ batch_size * pow(2., -m_n_iteration);
     }
 }
 

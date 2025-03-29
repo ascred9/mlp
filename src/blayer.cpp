@@ -131,9 +131,9 @@ void BayesianLayer::add_gradient(const std::pair<Matrix, Vector>& dL, unsigned i
     if (m_regulization_rate > 0.)
     {
         m_gradDW.array() += (pow(m_regulization_rate, -2.) * m_Wsigma(m_devMatrixW).array() - m_Wsigma(m_devMatrixW).array().inverse())
-            * m_pWsigma(m_devMatrixW).array() * 1./ batch_size;// * pow(2., -m_n_iteration);
+            * m_pWsigma(m_devMatrixW).array() * 1./ batch_size * pow(2., -m_n_iteration);
         m_gradDB.array() += (pow(m_regulization_rate, -2.) * m_Bsigma(m_devVectorB).array() - m_Bsigma(m_devVectorB).array().inverse())
-            * m_pBsigma(m_devVectorB).array() * 1./ batch_size;// * pow(2., -m_n_iteration);
+            * m_pBsigma(m_devVectorB).array() * 1./ batch_size * pow(2., -m_n_iteration);
     }
 }
 
@@ -161,20 +161,20 @@ void BayesianLayer::update()
         return;
 
     // Generate random matrix epsilon for W and update tempMatrixW
-    //std::vector<double> vW(m_size * m_out_size);
-    //std::generate(vW.begin(), vW.end(), [&]() {return m_gaus(m_gen);});
+    std::vector<double> vW(m_size * m_out_size);
+    std::generate(vW.begin(), vW.end(), [&]() {return m_gaus(m_gen);});
 
-    //m_epsilonW = Eigen::Map<Matrix, Eigen::Aligned>(vW.data(), m_size, m_out_size);
-    m_epsilonW = Matrix::NullaryExpr(m_size, m_out_size, [&](){return m_gaus(m_gen);});
+    m_epsilonW = Eigen::Map<Matrix, Eigen::Aligned>(vW.data(), m_size, m_out_size);
+    //m_epsilonW = Matrix::NullaryExpr(m_size, m_out_size, [&](){return m_gaus(m_gen);});
     m_tempMatrixW = m_matrixW.array()
         + m_epsilonW.array() * m_Wsigma(m_devMatrixW).array();
 
     // Generate random matrix epsilon for B and update tempMatrixB
-    //std::vector<double> vB(m_out_size);
-    //std::generate(vB.begin(), vB.end(), [&]() {return m_gaus(m_gen);});
+    std::vector<double> vB(m_out_size);
+    std::generate(vB.begin(), vB.end(), [&]() {return m_gaus(m_gen);});
 
-    //m_epsilonB = Eigen::Map<Vector, Eigen::Aligned>(vB.data(), m_out_size);
-    m_epsilonB = Vector::NullaryExpr(m_out_size, [&](){return m_gaus(m_gen);});
+    m_epsilonB = Eigen::Map<Vector, Eigen::Aligned>(vB.data(), m_out_size);
+    //m_epsilonB = Vector::NullaryExpr(m_out_size, [&](){return m_gaus(m_gen);});
     m_tempVectorB = m_vectorB.array()
         + m_epsilonB.array() * m_Bsigma(m_devVectorB).array();
 }

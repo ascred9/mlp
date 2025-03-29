@@ -118,8 +118,8 @@ void KDE::recalculate_exclusive(const std::vector<double>& reco)
         p /= count;
 
         m_f.at(i) = p;
-        //m_qs.at(i) = q;
-        //m_logs.push_back(log(2*p/(p+q)));
+        m_qs.at(i) = q;
+        //double clog = log(2*p/(p+q));
         double clog = (q == 0 || p == 0) ? 0. : log(p/q);
         if (q == 0 && p != 0)
             clog = 1e5;
@@ -372,8 +372,8 @@ void KDE::fast_recalculate(const std::vector<double>& reco)
     }
  
     // Create gaus
-    auto gaus = [&](double x, double y){ return 2. / (sqrt(1 * M_PI) * m_h * dev) * exp(-0.5*pow((x - y)/(m_h * dev), 2)); };
-    auto dgaus = [&](double x, double y){ return -2. / (sqrt(1 * M_PI) * m_h * dev) * exp(-0.5*pow((x - y)/(m_h * dev), 2)) * (x-y)/pow(m_h * dev, 2); };
+    auto gaus = [&](double x, double y){ return 1. / (sqrt(1 * M_PI) * m_h * dev) * exp(-0.5*pow((x - y)/(m_h * dev), 2)); };
+    auto dgaus = [&](double x, double y){ return -1. / (sqrt(1 * M_PI) * m_h * dev) * exp(-0.5*pow((x - y)/(m_h * dev), 2)) * (x-y)/pow(m_h * dev, 2); };
 
     m_kl = 0;
     m_dkl = 0;

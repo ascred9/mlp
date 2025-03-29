@@ -492,6 +492,8 @@ void Network::train_input(const int nepoch, std::vector<std::vector<double>> tra
     pop(epsilon);
     double amp = m_layer_deque.get_step(); // step amplitude
     std::random_device rd("/dev/random");
+    std::normal_distribution<> gaus{0., 1.};
+    std::mt19937 gen{rd()};
     for (int iep = 0; iep < nepoch; ++iep)
     {
         start = clock();
@@ -504,6 +506,19 @@ void Network::train_input(const int nepoch, std::vector<std::vector<double>> tra
         std::shuffle(train_input.begin(), train_input.end(), std::mt19937{rn});
         std::shuffle(train_output.begin(), train_output.end(), std::mt19937{rn});
         std::shuffle(train_weights.begin(), train_weights.end(), std::mt19937{rn});
+
+        bool randomize_input = false;
+        if (randomize_input)
+        {
+            double eta = 0.1;
+            auto ep = [&gaus, &gen](){return gaus(gen);};
+            for (unsigned int i = 0; i < train_input.size(); i++)
+            {
+                for (unsigned int j = 0; j < train_input.at(i).size(); j++)
+                    train_input.at(i).at(j) += eta * ep();
+            }
+        }
+
         m_layer_deque.train(train_input, train_output, train_weights, batch_size, minibatch_size);
 
         // Testing after
