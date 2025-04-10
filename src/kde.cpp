@@ -225,14 +225,14 @@ void KDE::recalculate_inclusive(const std::vector<double>& data, const std::vect
     dev = sqrt(dev);
 
     // Calculate h
-    m_h = pow(4. / (3.*count), 0.2) * dev * 0.25;
+    m_h = pow(4. / (3.*count), 0.2) * dev;// * 0.25;
  
     // Create gaus
-    //auto gaus = [&](double x, double y){ return 1. / (sqrt(2 * M_PI) * m_h * dev) * exp(-0.5*pow((x - y)/(m_h * dev), 2)); };
-    //auto dgaus = [&](double x, double y){ return -1. / (sqrt(2 * M_PI) * m_h * dev) * exp(-0.5*pow((x - y)/(m_h * dev), 2)) * (x-y)/pow(m_h * dev, 2); };
+    auto gaus = [&](double x, double y){ return 1. / (sqrt(2 * M_PI) * m_h * dev) * exp(-0.5*pow((x - y)/(m_h * dev), 2)); };
+    auto dgaus = [&](double x, double y){ return -1. / (sqrt(2 * M_PI) * m_h * dev) * exp(-0.5*pow((x - y)/(m_h * dev), 2)) * (x-y)/pow(m_h * dev, 2); };
 
-    auto gaus = [&](double x, double y){ return 1 - 0.5 * pow((x - y)/(m_h*dev), 2) > 0 ? 1. / (sqrt(2 * M_PI) * m_h * dev) * (1 - 0.5 * pow((x - y)/(m_h*dev), 2)) : 0;};
-    auto dgaus = [&](double x, double y){ return 1 - 0.5 * pow((x - y)/(m_h*dev), 2) > 0 ? -(x-y)/pow(m_h * dev, 2) : 0;};
+    //auto gaus = [&](double x, double y){ return 1 - 0.5 * pow((x - y)/(m_h*dev), 2) > 0 ? 1. / (sqrt(2 * M_PI) * m_h * dev) * (1 - 0.5 * pow((x - y)/(m_h*dev), 2)) : 0;};
+    //auto dgaus = [&](double x, double y){ return 1 - 0.5 * pow((x - y)/(m_h*dev), 2) > 0 ? -(x-y)/pow(m_h * dev, 2) : 0;};
 
     m_kl = 0;
     m_dkl = 0;
@@ -255,8 +255,8 @@ void KDE::recalculate_inclusive(const std::vector<double>& data, const std::vect
 
         for (auto jt = reco.begin(); jt != reco.end(); ++jt)
         {
-            if (abs(*jt - val) > 3)
-                continue;
+            //if (abs(*jt - val) > 3)
+            //    continue;
 
             p += gaus(val, *jt);
         }
@@ -285,8 +285,8 @@ void KDE::recalculate_inclusive(const std::vector<double>& data, const std::vect
         for (auto j = 0; j < data_size; ++j)
         {
             double valx = m_gen.at(j);
-            if (abs(valx - val) > 5)
-                continue;
+            //if (abs(valx - val) > 5)
+            //    continue;
 
             double pj = m_f.at(j);
             double part = pj != 0 ? -dgaus(val, valx) / pj : (val - valx);// * 1e5;

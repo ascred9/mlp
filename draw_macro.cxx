@@ -133,13 +133,14 @@ void draw_macro(TString filename = "out.root")
     f->SetParameter(0, 2000);
     f->SetParameter(1, 10);
     f->SetParameter(2, 0.15);
+    f->SetParLimits(2, 0.01, 0.5);
     gROOT->ProcessLine("h5->Fit(\"fexpected\")");
     f->SetLineStyle(kDashed);
     f->SetLineColor(kBlack);
     f->Draw("same");
     
     TH1D* hist_random = new TH1D("hist_random", "hist_random", 300, 0, 300);
-    NovosibirskGenerator gen(0, 12.71, 0.1747);
+    NovosibirskGenerator gen(0, 0.1 * 10, 0.1747);
     for (int i = 0; i < tph->GetEntries(); i++)
     {
         tph->GetEntry(i);

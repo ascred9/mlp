@@ -9,6 +9,7 @@
 #include "TLegend.h"
 
 #include "include/network.h"
+#include "include/bnetwork.h"
 #include "include/kde.h"
 
 int test_kde()
@@ -21,7 +22,8 @@ int test_kde()
         return -1;
     }
 
-    NetworkPtr net_ptr = std::make_unique<Network>();
+    //NetworkPtr net_ptr = std::make_unique<Network>();
+    BayesianNetworkPtr net_ptr = std::make_unique<BayesianNetwork>();
     //net_ptr->init_from_file("build/btest_theta3.txt", "build/btest_theta4.txt");
     //net_ptr->init_from_file("build/100_200_perpendicular_v9.txt", "build/100_200_perpendicular_v9.txt");
     net_ptr->init_from_file("build/btest2.txt", "build/btest2.txt");
@@ -44,7 +46,7 @@ int test_kde()
     std::vector<std::vector<double>> input;
     std::vector<double> sim;
     int N = tph->GetEntries();
-    int size = 10000;
+    int size = 30000;
     //for (int i = 0; i < 1000; ++i)
     for (int i = 0; input.size() < size; i++)
     {
@@ -69,7 +71,7 @@ int test_kde()
     start = clock();
     KDE kde;
     kde.set_verbose();
-    bool exclusive = true;
+    bool exclusive = false;
     if (exclusive)
         kde.fast_recalculate(reco);//kde.recalculate_exclusive(reco);
     else
@@ -112,8 +114,8 @@ int test_kde()
         else
             x = kde.m_gen.at(i);
 
-        graph_sim->AddPoint(rec, kde.m_expected_f(rec));
-        graph_dsim->AddPoint(rec, kde.m_expected_df(rec));
+        graph_sim->AddPoint(x, kde.m_expected_f(x));
+        graph_dsim->AddPoint(x, kde.m_expected_df(x));
         graph_exp->AddPoint(x, kde.m_f.at(i));
 
         if (exclusive)
@@ -142,31 +144,35 @@ int test_kde()
     graph_sim->SetLineColor(kBlue);
     graph_dsim->SetLineColor(kBlack);
     graph_exp->SetLineColor(kRed);
+    gr_kde->SetMarkerColor(kGreen);
+    gr_kde->SetLineColor(kGreen);
     mg->Add(graph_sim, "AP");
     mg->Add(graph_dsim, "AP");
     mg->Add(graph_exp, "AP");
+    mg->Add(gr_kde, "AP");
     mg->Draw("AP");
     TLegend* legend1 = new TLegend(0.1, 0.7, 0.3, 0.9);
     legend1->AddEntry(graph_sim, "smoothed sim", "l");
     legend1->AddEntry(graph_dsim, "deriv sim", "l");
     legend1->AddEntry(graph_exp, "reco", "l");
+    legend1->AddEntry(gr_kde, "deriv reco", "l");
     legend1->Draw();
 
     c->cd(2)->SetGrid();
     c->cd(2);
-    gr_kde->SetMarkerColor(kBlack);
+    //gr_kde->SetMarkerColor(kBlack);
     gr_log->SetMarkerColor(kRed);
     gr_plog->SetMarkerColor(kBlue);
-    gr_kde->SetLineColor(kBlack);
+    //gr_kde->SetLineColor(kBlack);
     gr_log->SetLineColor(kRed);
     gr_plog->SetLineColor(kBlue);
-    mg2->Add(gr_kde, "AP");
+    //mg2->Add(gr_kde, "AP");
     mg2->Add(gr_log, "AP");
     mg2->Add(gr_plog, "AP");
     mg2->Draw("AP");
     TLegend* legend2 = new TLegend(0.1, 0.7, 0.3, 0.9);
     legend2->AddEntry(gr_log, "ln(p(xi)/q(xi))", "l");
-    legend2->AddEntry(gr_kde, "dKL/dxi", "l");
+    //legend2->AddEntry(gr_kde, "dKL/dxi", "l");
     legend2->AddEntry(gr_plog, "p * ln(p/q)", "l");
     legend2->Draw();
 

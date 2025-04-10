@@ -158,8 +158,8 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
     
             //m_kde_local->recalculate_exclusive(reco_local);
             //m_kde_global->recalculate_exclusive(reco_global);
-            m_kde_global->fast_recalculate(reco_global);
-            //m_kde_global->recalculate_inclusive(data, reco_global);
+            //m_kde_global->fast_recalculate(reco_global);
+            m_kde_global->recalculate_inclusive(data, reco_global);
     
             for (auto &layer: m_layers)
                 layer->m_trainMode = true;
@@ -173,38 +173,44 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
     {
         if (idx % batch_size == 0)
         {
-	    for (auto &layer: m_layers)
-	        layer->m_trainMode = false;
+	        for (auto &layer: m_layers)
+	            layer->m_trainMode = false;
 
-	    for (int i = 0; i < m_num; i++)
+	        for (int i = 0; i < m_num; i++)
             {
-	        m_means[i] = 0;
-	        m_nums[i] = 0;
-	    }
+	            m_means[i] = 0;
+	            m_nums[i] = 0;
+	        }
 
-	    for (unsigned int i = idx; i < idx + batch_size; i++)
-	    {
-	        double simen = output.at(i).at(0);
-		int mid = ((simen + 1) * m_num/2);
-		if (mid == m_num)
-		    mid--;
+	        for (unsigned int i = idx; i < idx + batch_size; i++)
+	        {
+	            double simen = output.at(i).at(0);
+                int mid = ((simen + 1) * 0.5 * m_num);
+                if (mid == m_num)
+                    mid--;
+        
+                if (mid > m_num || mid < 0)
+                    throw std::invalid_argument("invalid num of bin");
 
-		m_means[mid] += (calculate(input.at(i)).at(0) - simen);
-		m_nums[mid]++;
-	    }
+                m_means[mid] += (calculate(input.at(i)).at(0) - simen);
+                m_nums[mid]++;
+	        }
 
-	    for (int i = 0; i < m_num; i++)
-	    	m_means[i] /= m_nums[i];
+	        for (int i = 0; i < m_num; i++)
+	        	m_means[i] /= m_nums[i];
 
-	    for (auto &layer: m_layers)
-	        layer->m_trainMode = true;
+	        for (auto &layer: m_layers)
+	            layer->m_trainMode = true;
         }
 
-        int mid = ((output.at(idx).at(0) + 1) * m_num/2);
+        int mid = ((output.at(idx).at(0) + 1) * 0.5 * m_num);
         if (mid == m_num)
             mid--;
 
-	val += 1e3 * m_means[mid];
+        if (mid > m_num || mid < 0)
+            throw std::invalid_argument("invalid num of bin");
+
+	    val += 1e1 * 2 * m_means[mid];
     }
 
     if (m_useKS)
@@ -1053,7 +1059,7 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
         }
     }
 
-    Vector df = m_fploss(Y, *pX_layers.back()) + m_addition_gradient;
+    Vector df = m_addition_gradient; //m_fploss(Y, *pX_layers.back()) + m_addition_gradient;
     Vector delta = (W.array() * df.array()) *
         m_layers.back()->calculateXp( *pZ_layers.back() ).array();
 

@@ -65,14 +65,14 @@ private:
     bool m_useZeroSlope = false;
     std::vector<std::array<double, 4>> m_ls_data;
 
-    bool m_useKDE = true;
+    bool m_useKDE = false;
     std::unique_ptr<KDE> m_kde_local;
     std::unique_ptr<KDE> m_kde_global;
 
     bool m_useKS = false;
     std::unique_ptr<KStest> m_ks;
 
-    bool m_useBinningZeroMean = false;
+    bool m_useBinningZeroMean = true;
     static const int m_num = 20;
     double m_means[m_num];
     int m_nums[m_num];
