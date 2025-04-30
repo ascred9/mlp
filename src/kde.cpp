@@ -39,7 +39,6 @@ KDE::KDE(int type)
         
     //m_expected_df = [sigma](double x){return 0.5/(sqrt(2*M_PI) * sigma) * (exp(-0.5*pow((1+x)/sigma, 2)) - exp(-0.5*pow((1-x)/sigma, 2)));};
 
-
     //omp_set_dynamic(0);
     //int num = omp_get_max_threads();
     //std::cout << "Number of threads: " << num << std::endl;
@@ -466,4 +465,11 @@ void KDE::fast_recalculate(const std::vector<double>& reco)
         std::cout << "kl: " << m_kl << std::endl;
         std::cout << "dkl: " << m_dkl << std::endl << std::endl;
     }
+}
+
+void KDE::set_parameters(double sleft, double sright)
+{
+    m_expected_f = [sleft, sright](double x){
+        return 2./(sqrt(2*M_PI)*(sleft + sright)) * exp(-0.5*pow(x/ (x < 0 ? sleft : sright), 2));
+    };
 }

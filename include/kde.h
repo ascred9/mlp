@@ -51,4 +51,5 @@ public:
     double get_dkl() {return m_dkl;};
     void set_expected_distrib(std::function<double(double)> f_expected) {m_expected_f = f_expected;};
     void set_verbose() {m_verbose = true;};
+    void set_parameters(double sleft, double sright);
 };

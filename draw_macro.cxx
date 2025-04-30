@@ -15,6 +15,15 @@ Double_t LogGaus(Double_t* x, Double_t *p)
     return p[0] * p[3]/(sqrt(2*M_PI) * p[2] * s0) * exp(-pow(log(1 - p[3] * (x[0]-p[1]) / p[2])/s0, 2)/2 - pow(s0, 2)/2);
 }
 
+Double_t AsymGaus(Double_t* xx, Double_t* p)
+{
+    double x = xx[0];
+    double A = p[0];
+    double sleft = p[1];
+    double sright = p[2];
+    return A * 2./(sqrt(2*M_PI)*(sleft + sright)) * exp(-0.5*pow(x/ (x < 0 ? sleft : sright), 2));
+}
+
 void draw_macro(TString filename = "out.root")
 {
     bool flag = false;

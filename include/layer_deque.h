@@ -69,13 +69,25 @@ private:
     std::unique_ptr<KDE> m_kde_local;
     std::unique_ptr<KDE> m_kde_global;
 
+    bool m_useBinningKDE = true;
+    static const int m_num = 20;
+    std::vector<std::unique_ptr<KDE>> m_kdes;
+    std::vector<int> m_ids;
+    double m_kde_left[m_num];
+    double m_kde_right[m_num];
+    int m_nums_kde_left[m_num];
+    int m_nums_kde_right[m_num];
+
     bool m_useKS = false;
     std::unique_ptr<KStest> m_ks;
 
-    bool m_useBinningZeroMean = true;
-    static const int m_num = 20;
+    bool m_useBinningZeroMean = false;
     double m_means[m_num];
+    double m_std_left[m_num];
+    double m_std_right[m_num];
     int m_nums[m_num];
+    int m_nums_left[m_num];
+    int m_nums_right[m_num];
 
     bool m_neighbourSum = false;
     int m_kNeighbours = 10;

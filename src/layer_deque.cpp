@@ -42,6 +42,12 @@ LayerDeque::LayerDeque():
         //m_kde->set_verbose();
     }
 
+    if (m_useBinningKDE)
+    {
+        for (int i = 0; i < m_num; i++)
+            m_kdes.push_back(std::make_unique<KDE>(0));
+    }
+
     if (m_useKS)
     {
         m_ks = std::make_unique<KStest>(0.1, [](double x) {
@@ -169,6 +175,84 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
         val += 1e1 * m_kde_global->get_gradient( idx % batch_size);
     }
 
+    if (m_useBinningKDE)
+    {
+        if (idx % batch_size == 0)
+        {
+            m_ids.clear();
+	        for (int i = 0; i < m_num; i++)
+            {
+                m_kde_left[i] = 0;
+                m_kde_right[i] = 0;
+	            m_nums_kde_left[i] = 0;
+	            m_nums_kde_right[i] = 0;
+	        }
+
+            for (auto &layer: m_layers)
+                layer->m_trainMode = false;
+
+            // Fill arrays
+            std::vector<std::vector<double>> reco_local(m_num);
+            for (unsigned int i = idx; i < idx + batch_size; i++)
+            {
+                double simen = output.at(i).at(0);
+                double reco = calculate(input.at(i)).at(0);
+                int mid = ((simen + 1) * 0.5 * m_num);
+                if (mid == m_num)
+                    mid--;
+
+                m_ids.push_back(reco_local.at(mid).size());
+                reco_local.at(mid).push_back(reco - simen);
+                
+                if (reco - simen < 0)
+                {
+                    m_kde_left[mid] += pow(reco - simen, 2);
+                    m_nums_kde_left[mid]++;
+                }
+                else
+                {
+                    m_kde_right[mid] += pow(reco - simen, 2);
+                    m_nums_kde_right[mid]++;
+                }
+            }
+    
+            for (int i = 0; i < m_num; i++)
+            {
+                m_kde_left[i] = sqrt(m_kde_left[i] / m_nums_kde_left[i]);
+                m_kde_right[i] = sqrt(m_kde_right[i] / m_nums_kde_right[i]);
+            }
+
+            for (int i = 0; i < m_num; i++)
+            {
+                m_kdes.at(i)->set_parameters(m_kde_left[i], m_kde_right[i]);
+                m_kdes.at(i)->recalculate_exclusive(reco_local.at(i));
+            }
+
+            for (auto &layer: m_layers)
+                layer->m_trainMode = true;
+        }
+
+        double simen = output.at(idx).at(0);
+
+        for (auto &layer: m_layers)
+            layer->m_trainMode = false;
+
+        double reco = calculate(input.at(idx)).at(0);
+
+        for (auto &layer: m_layers)
+            layer->m_trainMode = true;
+
+        int mid = ((simen + 1) * 0.5 * m_num);
+        if (mid == m_num)
+            mid--;
+
+        val += 5e-1 * (
+                1e1 * m_kdes.at(mid)->get_gradient(m_ids.at(idx % batch_size)) + 
+                2 * (m_kde_left[mid] * 0.7 - m_kde_right[mid]) * 
+                (reco - simen) / (reco - simen < 0 ? m_kde_left[mid]/0.7 : -m_kde_right[mid])
+        );
+    }
+
     if (m_useBinningZeroMean)
     {
         if (idx % batch_size == 0)
@@ -179,7 +263,11 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
 	        for (int i = 0; i < m_num; i++)
             {
 	            m_means[i] = 0;
+                m_std_left[i] = 0;
+                m_std_right[i] = 0;
 	            m_nums[i] = 0;
+	            m_nums_left[i] = 0;
+	            m_nums_right[i] = 0;
 	        }
 
 	        for (unsigned int i = idx; i < idx + batch_size; i++)
@@ -192,7 +280,38 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
                 if (mid > m_num || mid < 0)
                     throw std::invalid_argument("invalid num of bin");
 
-                m_means[mid] += (calculate(input.at(i)).at(0) - simen);
+                double calc = calculate(input.at(i)).at(0);
+                if (calc < simen)
+                {
+                    m_std_left[mid] += pow(calc - simen, 2);
+                    m_nums_left[mid]++;
+                }
+                else
+                {
+                    m_std_right[mid] += pow(calc - simen, 2);
+                    m_nums_right[mid]++;
+                }
+
+	        }
+
+	        for (int i = 0; i < m_num; i++)
+            {
+	        	m_std_left[i] = sqrt(m_std_left[i]/m_nums_left[i]);
+	        	m_std_right[i] = sqrt(m_std_right[i]/m_nums_right[i]);
+            }
+
+	        for (unsigned int i = idx; i < idx + batch_size; i++)
+	        {
+	            double simen = output.at(i).at(0);
+                int mid = ((simen + 1) * 0.5 * m_num);
+                if (mid == m_num)
+                    mid--;
+        
+                if (mid > m_num || mid < 0)
+                    throw std::invalid_argument("invalid num of bin");
+
+                double calc = calculate(input.at(i)).at(0);
+                m_means[mid] += (calc - simen) / (calc < simen ? m_std_left[mid] : m_std_right[mid]);
                 m_nums[mid]++;
 	        }
 
@@ -210,7 +329,17 @@ void LayerDeque::prepare_batch(const std::vector<std::vector<double>>& input,
         if (mid > m_num || mid < 0)
             throw std::invalid_argument("invalid num of bin");
 
-	    val += 1e1 * 2 * m_means[mid];
+	    for (auto &layer: m_layers)
+	        layer->m_trainMode = false;
+
+        double calcus = calculate(input.at(idx)).at(0);
+
+	    for (auto &layer: m_layers)
+	        layer->m_trainMode = true;
+
+	    val += 1e1 * 2 * m_means[mid] / (calcus < output.at(idx).at(0) ? m_std_left[mid] : m_std_right[mid]) +
+            1e2 * (m_std_left[mid]*0.72 - m_std_right[mid]) / (calcus < output.at(idx).at(0) ? m_std_left[mid] / 0.72 : -m_std_right[mid]) *
+            (calcus - output.at(idx).at(0));
     }
 
     if (m_useKS)
@@ -945,6 +1074,15 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
     if (m_useKDE)
         std::cout << "KL: " << m_kde_global->get_kl() << " -> grad: " << m_kde_global->get_dkl() << std::endl;
 
+    if (m_useBinningKDE)
+    {
+        for (int i = 0; i < m_num; i++)
+        {
+            std::cout << i+1 << ") KL: " << m_kdes.at(i)->get_kl() << " -> grad: " << m_kdes.at(i)->get_dkl();
+            std::cout << " [" << m_kde_left[i] << ", " << m_kde_right[i] << "]" << std::endl;
+        }
+    }
+
     if (m_useKS)
         std::cout << "KS: " << m_ks->get_sup() << " x0: " << m_ks->get_x0() << std::endl;
 
@@ -973,6 +1111,15 @@ void LayerDeque::train(const std::vector<std::vector<double>>& input, const std:
         std::cout << "rho2 \t k: " << m_ls_data.at(8).at(0) << ", b " << m_ls_data.at(8).at(1) << std::endl;
         std::cout << "theta2 \t k: " << m_ls_data.at(9).at(0) << ", b " << m_ls_data.at(9).at(1) << std::endl;
         std::cout << "phi2 \t k: " << m_ls_data.at(10).at(0) << ", b " << m_ls_data.at(10).at(1) << std::endl;
+    }
+
+    if (m_useBinningZeroMean)
+    {
+        for (int i = 0; i < m_num; i++)
+        {
+            std::cout << m_means[i] << " [" << m_std_left[i] << ", " << m_std_right[i] << "]: ";
+            std::cout << m_std_right[i]/m_std_left[i] << std::endl;
+        }
     }
 
     set_trainMode(false);
@@ -1059,7 +1206,7 @@ std::vector<std::pair<Matrix, Vector>> LayerDeque::get_gradient(const std::vecto
         }
     }
 
-    Vector df = m_addition_gradient; //m_fploss(Y, *pX_layers.back()) + m_addition_gradient;
+    Vector df = m_fploss(Y, *pX_layers.back()) + m_addition_gradient;
     Vector delta = (W.array() * df.array()) *
         m_layers.back()->calculateXp( *pZ_layers.back() ).array();
 
